@@ -1,38 +1,58 @@
-import FetchDataSteps from "@/components/tutorial/fetch-data-steps";
-import { createClient } from "@/utils/supabase/server";
-import { InfoIcon } from "lucide-react";
-import { redirect } from "next/navigation";
+'use client';
 
-export default async function ProtectedPage() {
-  const supabase = await createClient();
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return redirect("/sign-in");
-  }
-
+export default function ProtectedPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function checkProfile() {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      
+      // Primeiro, obter a sessão atual
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push('/sign-in');
+        return;
+      }
+      
+      // Usar o ID do usuário da sessão
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_approved, is_admin')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (profile) {
+        if (!profile.is_approved) {
+          router.push('/pending');
+        } else if (profile.is_admin) {
+          router.push('/admin');
+        } else {
+          router.push('/profile');
+        }
+      } else {
+        // Se o perfil não existe, redirecionar para página inicial
+        router.push('/');
+      }
+      
+      setLoading(false);
+    }
+    
+    checkProfile();
+  }, [router]);
+  
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </div>
-      <div>
-        <h2 className="font-bold text-2xl mb-4">Next steps</h2>
-        <FetchDataSteps />
-      </div>
+    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
+      <p className="text-center">Redirecionando para a página adequada...</p>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
     </div>
   );
 }

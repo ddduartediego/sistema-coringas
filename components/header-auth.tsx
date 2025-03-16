@@ -11,6 +11,19 @@ export default async function AuthButton() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  
+  let userName = null;
+  
+  if (user) {
+    // Buscar perfil para obter o nome
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('user_id', user.id)
+      .single();
+      
+    userName = profile?.name || user.user_metadata?.name || user.email;
+  }
 
   if (!hasEnvVars) {
     return (
@@ -21,7 +34,7 @@ export default async function AuthButton() {
               variant={"default"}
               className="font-normal pointer-events-none"
             >
-              Please update .env.local file with anon key and url
+              Atualize o arquivo .env.local com as chaves do Supabase
             </Badge>
           </div>
           <div className="flex gap-2">
@@ -32,7 +45,7 @@ export default async function AuthButton() {
               disabled
               className="opacity-75 cursor-none pointer-events-none"
             >
-              <Link href="/sign-in">Sign in</Link>
+              <Link href="/sign-in">Entrar</Link>
             </Button>
             <Button
               asChild
@@ -41,7 +54,7 @@ export default async function AuthButton() {
               disabled
               className="opacity-75 cursor-none pointer-events-none"
             >
-              <Link href="/sign-up">Sign up</Link>
+              <Link href="/sign-up">Cadastrar</Link>
             </Button>
           </div>
         </div>
@@ -49,21 +62,26 @@ export default async function AuthButton() {
     );
   }
   return user ? (
-    <div className="flex items-center gap-4">
-      Hey, {user.email}!
+    <div className="flex items-center gap-3">
+      <div className="flex items-center">
+        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center mr-2 text-primary-600">
+          {userName ? userName.charAt(0).toUpperCase() : 'U'}
+        </div>
+        <span className="font-medium">{userName}</span>
+      </div>
       <form action={signOutAction}>
-        <Button type="submit" variant={"outline"}>
-          Sign out
+        <Button type="submit" variant={"outline"} size="sm">
+          Sair
         </Button>
       </form>
     </div>
   ) : (
     <div className="flex gap-2">
       <Button asChild size="sm" variant={"outline"}>
-        <Link href="/sign-in">Sign in</Link>
+        <Link href="/sign-in">Entrar</Link>
       </Button>
       <Button asChild size="sm" variant={"default"}>
-        <Link href="/sign-up">Sign up</Link>
+        <Link href="/sign-up">Cadastrar</Link>
       </Button>
     </div>
   );
