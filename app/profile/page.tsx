@@ -19,7 +19,9 @@ import {
   AccountCircle,
   BusinessCenter,
   Check,
-  Warning
+  Warning,
+  CalendarMonth,
+  Bloodtype
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import CobrancasIntegrante from './components/CobrancasIntegrante';
@@ -75,6 +77,8 @@ const profileSchema = z.object({
   gender: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   profession: z.string().optional().nullable(),
+  is_blood_donor: z.boolean().optional().nullable(),
+  last_blood_donation: z.string().optional().nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -104,7 +108,7 @@ export default function ProfilePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const { control, handleSubmit, setValue, reset, formState: { errors } } = useForm<ProfileFormData>({
+  const { control, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       nickname: '',
@@ -116,6 +120,8 @@ export default function ProfilePage() {
       gender: null,
       phone: null,
       profession: null,
+      is_blood_donor: null,
+      last_blood_donation: null,
     }
   });
 
@@ -155,6 +161,8 @@ export default function ProfilePage() {
           setValue('gender', profile.gender || null);
           setValue('phone', profile.phone || null);
           setValue('profession', profile.profession || null);
+          setValue('is_blood_donor', profile.is_blood_donor || null);
+          setValue('last_blood_donation', profile.last_blood_donation || null);
         }
 
         // Buscar opções de status
@@ -200,6 +208,8 @@ export default function ProfilePage() {
           gender: data.gender,
           phone: data.phone,
           profession: data.profession,
+          is_blood_donor: data.is_blood_donor,
+          last_blood_donation: data.last_blood_donation,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profileData.id);
@@ -243,9 +253,22 @@ export default function ProfilePage() {
         gender: profileData.gender || null,
         phone: profileData.phone || null,
         profession: profileData.profession || null,
+        is_blood_donor: profileData.is_blood_donor || null,
+        last_blood_donation: profileData.last_blood_donation || null,
       });
     }
     setIsEditing(false);
+  };
+
+  // Função para verificar se pode doar sangue
+  const canDonateBlood = (lastDonationDate: string | null) => {
+    if (!lastDonationDate) return true;
+    
+    const lastDonation = new Date(lastDonationDate);
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    return lastDonation <= threeMonthsAgo;
   };
 
   if (loading) {
@@ -560,6 +583,66 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <p className="font-medium">{profileData?.profession || '-'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Doador de Sangue */}
+                <div className="flex items-start">
+                  <Bloodtype className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Doador de Sangue</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="is_blood_donor"
+                          control={control}
+                          render={({ field: { value, onChange, ...field } }) => (
+                            <input
+                              {...field}
+                              type="checkbox"
+                              checked={value || false}
+                              onChange={(e) => onChange(e.target.checked)}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.is_blood_donor ? 'Sim' : 'Não'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Última Doação */}
+                <div className="flex items-start">
+                  <CalendarMonth className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Última Doação</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="last_blood_donation"
+                          control={control}
+                          render={({ field }) => (
+                            <input
+                              {...field}
+                              type="date"
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">
+                        {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
+                      </p>
+                    )}
+                    {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
+                      <p className="text-sm text-green-600 mt-1">
+                        Você já pode fazer uma nova doação de sangue! 🩸
+                      </p>
                     )}
                   </div>
                 </div>
