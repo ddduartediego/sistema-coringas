@@ -4,7 +4,18 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
 import ModalRegistrarPagamento from './ModalRegistrarPagamento';
 
-type Cobranca = Database['public']['Tables']['cobranca_integrantes']['Row'];
+// Definindo um tipo customizado que representa os dados da cobrança como usados na aplicação
+interface Cobranca {
+  id: string;
+  cobrancaId?: string;
+  nome: string;
+  valor: number;
+  mes_vencimento: number;
+  ano_vencimento: number;
+  status: string;
+  integrante?: string;
+  integranteId?: string;
+}
 
 interface TabelaCobrancasProps {
   supabase: SupabaseClient<Database>;
