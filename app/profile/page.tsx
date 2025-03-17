@@ -353,10 +353,10 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="pb-8">
         {/* Header com foto de perfil */}
         <motion.div 
-          className="bg-white rounded-lg shadow-md overflow-hidden mb-8"
+          className="bg-white rounded-lg shadow-md mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -381,7 +381,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Grid com Informações Pessoais e Cobranças */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Informações Pessoais */}
           <motion.div 
             className="bg-white rounded-lg shadow-md overflow-hidden h-fit"

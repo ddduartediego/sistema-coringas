@@ -27,14 +27,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-white text-gray-900 antialiased">
+      <body className="bg-white text-gray-900 antialiased h-screen overflow-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen flex flex-col">
+          <div className="h-full flex flex-col">
             <nav className="w-full border-b border-b-foreground/10 h-16">
               <div className="w-full flex justify-end items-center h-full p-3 px-5">
                 {!hasEnvVars ? null : <HeaderAuth />}
@@ -44,14 +44,6 @@ export default function RootLayout({
             <div className="flex-1">
               {children}
             </div>
-
-            <footer className="w-full flex items-center justify-center border-t py-4 text-xs text-gray-500">
-              <p>
-                &copy; {new Date().getFullYear()} Sistema Coringas
-              </p>
-              <span className="mx-3">•</span>
-              <ThemeSwitcher />
-            </footer>
           </div>
         </ThemeProvider>
       </body>
