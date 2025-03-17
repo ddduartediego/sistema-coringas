@@ -11,7 +11,8 @@ import {
   Close as CloseIcon,
   ChevronLeft,
   ChevronRight,
-  AttachMoney
+  AttachMoney,
+  SupervisorAccount
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -121,6 +122,23 @@ export default function Sidebar({ isAdmin, onCollapse }: SidebarProps) {
               >
                 <Dashboard className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>Administração</span>}
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link 
+                href="/lideranca" 
+                className={`
+                  flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 rounded-lg transition-colors
+                  ${isLinkActive('/lideranca') 
+                    ? 'bg-primary-50 text-primary-700 font-medium' 
+                    : 'text-gray-600 hover:bg-gray-50'}
+                `}
+                onClick={closeSidebarOnMobile}
+                title={isCollapsed ? "Liderança" : ""}
+              >
+                <SupervisorAccount className={isCollapsed ? '' : 'mr-3'} />
+                {!isCollapsed && <span>Liderança</span>}
               </Link>
             )}
 
