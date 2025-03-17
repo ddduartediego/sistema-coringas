@@ -1,195 +1,303 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
-import { 
-  Groups, 
-  Security, 
-  Person, 
-  CheckCircle, 
-  ArrowForward 
-} from '@mui/icons-material';
+import { FaGoogle, FaUsers, FaCalendarAlt, FaFileInvoiceDollar, FaUserCog, FaChevronRight, FaArrowRight } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
-export default function Home() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
+// Componente de cartão para funcionalidades
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+  <motion.div 
+    className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-all"
+    whileHover={{ y: -5 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4">
+      {icon}
+    </div>
+    <h3 className="text-lg font-semibold mb-2">{title}</h3>
+    <p className="text-gray-600">{description}</p>
+  </motion.div>
+);
 
-  // Usando o useEffect para garantir que createBrowserClient é chamado apenas no cliente
-  useEffect(() => {
-    setIsClient(true);
-    
-    async function checkSession() {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // Buscar perfil
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_approved, is_admin')
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (profile) {
-          if (!profile.is_approved) {
-            router.push('/pending');
-          } else if (profile.is_admin) {
-            router.push('/admin');
-          } else {
-            router.push('/profile');
-          }
-        }
-      } else {
-        setLoading(false);
-      }
-    }
-
-    checkSession();
-  }, [router]);
-
-  if (!isClient || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+export default function HomePage() {
+  // Lista de funcionalidades
+  const features = [
+    {
+      icon: <FaUsers className="w-6 h-6" />,
+      title: "Gestão de Integrantes",
+      description: "Cadastro completo dos membros da equipe."
+    },
+    {
+      icon: <FaCalendarAlt className="w-6 h-6" />,
+      title: "Eventos",
+      description: "Organização e controle de todos os eventos da equipe"
+    },
+    {
+      icon: <FaFileInvoiceDollar className="w-6 h-6" />,
+      title: "Cobranças",
+      description: "Gerenciamento de mensalidades e outras contribuições financeiras, com histórico e status de pagamento."
+    },
+    {
+      icon: <FaUserCog className="w-6 h-6" />,
+      title: "Área Administrativa",
+      description: "Painel exclusivo para coordenadores com ferramentas de gestão avançadas e relatórios."
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <div className="flex items-center">
-            <span className="bg-gradient-to-r from-primary-500 to-primary-700 text-transparent bg-clip-text text-3xl font-bold">
-              Sistema Coringas
-            </span>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Cabeçalho */}
+      <header className="bg-white shadow-sm py-4">
+        <div className="container mx-auto px-4 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            {/* Logo do sistema - substitua pelo logo real */}
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">SC</div>
+            <h1 className="text-xl font-bold text-gray-800">Sistema Coringas</h1>
           </div>
-          <Link 
-            href="/sign-in" 
-            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-md transition-colors duration-300 flex items-center text-sm font-medium"
-          >
-            Entrar <ArrowForward className="ml-1 text-sm" />
-          </Link>
+          <div className="space-x-4">
+            <Link
+              href="/sign-in"
+              className="px-4 py-2 rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              Entrar
+            </Link>
+            <Link
+              href="/sign-up"
+              className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              Cadastrar
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main>
-        {/* Hero Section */}
-        <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:py-24 lg:px-8 flex flex-col md:flex-row items-center">
-          <div className="text-center md:text-left md:w-1/2 mb-10 md:mb-0">
-            <h2 className="text-4xl font-extrabold text-gray-900 sm:text-5xl sm:tracking-tight">
-              Gestão de Integrantes
-            </h2>
-            <p className="mt-4 text-xl text-gray-500 max-w-3xl">
-              Sistema desenvolvido para facilitar a gestão de integrantes da Equipe Coringas com interface moderna e clean.
+      {/* Seção principal hero */}
+      <section className="container mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center">
+        <motion.div 
+          className="md:w-1/2 mb-10 md:mb-0"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            Plataforma de Gestão da <br />
+            <span className="text-blue-600">Equipe Coringas</span>
+          </h2>
+          <p className="text-lg text-gray-600 mb-8">
+            Sistema desenvolvido para apoiar na gestão da equipe
+          </p>
+          <div className="flex space-x-4">
+            <Link href="/sign-up" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+              Começar agora <FaArrowRight className="ml-2" />
+            </Link>
+            <a href="#features" className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              Saiba mais
+            </a>
+          </div>
+        </motion.div>
+        <motion.div 
+          className="md:w-1/2 flex justify-center"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Imagem ilustrativa do sistema com o logo Coringas DEVS */}
+          <div className="w-full max-w-md bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-xl shadow-lg overflow-hidden">
+            <div className="relative p-8 py-12">
+              {/* Decoração de código no fundo */}
+              <div className="absolute inset-0 opacity-15 flex items-center justify-center overflow-hidden">
+                <div className="text-white text-sm font-mono transform rotate-6 scale-125">
+                  <div>function coringasDevs() {`{`}</div>
+                  <div>&nbsp;&nbsp;return SQTF.map(dev {`=>`} {`{`}</div>
+                  <div>&nbsp;&nbsp;&nbsp;&nbsp;dev.skills.push('excelência');</div>
+                  <div>&nbsp;&nbsp;&nbsp;&nbsp;return dev;</div>
+                  <div>&nbsp;&nbsp;{`}`});</div>
+                  <div>{`}`}</div>
+                </div>
+              </div>
+              
+              {/* Conteúdo principal */}
+              <div className="relative z-10 text-white text-center">
+                {/* Logo do coringa estilizado */}
+                <motion.div 
+                  className="mx-auto w-48 h-48 mb-6 relative overflow-hidden rounded-full border-4 border-white/30"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ 
+                    duration: 0.8,
+                    ease: "easeOut"
+                  }}
+                  whileHover={{ 
+                    scale: 1.05,
+                    boxShadow: "0 0 25px rgba(255,255,255,0.3)",
+                    borderColor: "rgba(255,255,255,0.5)"
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/30 to-blue-500/30 rounded-full pulse-slow"></div>
+                  <motion.div 
+                    className="absolute inset-0 flex items-center justify-center"
+                    animate={{ 
+                      rotate: [0, 2, 0, -2, 0],
+                    }}
+                    transition={{ 
+                      repeat: Infinity, 
+                      duration: 5,
+                      ease: "easeInOut" 
+                    }}
+                  >
+                    <Image 
+                      src="/coringas_logo.jpeg" 
+                      alt="Coringas DEVS Logo" 
+                      width={200}
+                      height={200}
+                      className="object-cover h-full w-full rounded-full"
+                    />
+                  </motion.div>
+                </motion.div>
+
+                <style jsx global>{`
+                  @keyframes pulse-slow {
+                    0% { opacity: 0.5; }
+                    50% { opacity: 0.8; }
+                    100% { opacity: 0.5; }
+                  }
+                  .pulse-slow {
+                    animation: pulse-slow 3s infinite;
+                  }
+                `}</style>
+                
+                <h3 className="text-3xl font-bold mb-1 tracking-wide">CORINGAS</h3>
+                <div className="flex items-center justify-center mb-3">
+                  <div className="h-0.5 w-12 bg-white opacity-50 mr-3"></div>
+                  <p className="text-xl font-bold text-yellow-300">DEVS.</p>
+                  <div className="h-0.5 w-12 bg-white opacity-50 ml-3"></div>
+                </div>
+                <p className="text-lg opacity-90 font-medium">#SQTF</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Seção de funcionalidades */}
+      <section id="features" className="bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Funcionalidades do Sistema</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Conheça os principais módulos e ferramentas disponíveis para gerenciar a equipe.
             </p>
-            <div className="mt-8">
-              <Link
-                href="/sign-in"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 shadow-sm transition-all hover:shadow"
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <FeatureCard 
+                key={index}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+              />
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <p className="text-gray-600 mb-4">
+              Novas funcionalidades estão sempre sendo desenvolvidas.
+              Tem sugestões? Entre em contato com a coordenação da equipe!
+            </p>
+            <Link href="/sign-up" className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+              Cadastre-se agora e comece a usar <FaChevronRight className="ml-1" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Seção de processo de registro */}
+      <section className="container mx-auto px-4 py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Como Acessar o Sistema</h2>
+            <p className="text-gray-600">
+              Entenda o processo de registro e acesso à plataforma.
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+            <h3 className="text-xl font-semibold mb-4 flex items-center">
+              <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">1</span>
+              Registro com Conta Google
+            </h3>
+            <p className="text-gray-600 mb-4">
+              O cadastro é realizado com sua conta Google, garantindo maior segurança e facilidade.
+              Apenas forneça o acesso quando solicitado e seus dados básicos serão importados automaticamente.
+            </p>
+            <div className="flex justify-center mt-6">
+              <Link 
+                href="/sign-up" 
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
               >
-                Acessar Sistema <ArrowForward className="ml-2" />
+                <FaGoogle className="mr-2 text-red-500" /> Continuar com Google
               </Link>
             </div>
           </div>
-          <div className="md:w-1/2 flex justify-center">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="p-6 bg-gradient-to-r from-primary-500 to-primary-700 text-white">
-                <h3 className="text-xl font-bold">Sistema Coringas</h3>
-                <p className="mt-1 text-primary-100">Plataforma de gestão de integrantes</p>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center">
-                  <CheckCircle className="text-green-500 mr-3" />
-                  <p>Gestão completa de integrantes</p>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="text-green-500 mr-3" />
-                  <p>Perfis personalizados</p>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="text-green-500 mr-3" />
-                  <p>Autenticação segura</p>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle className="text-green-500 mr-3" />
-                  <p>Interface administrativa intuitiva</p>
-                </div>
-              </div>
+          
+          <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+            <h3 className="text-xl font-semibold mb-4 flex items-center">
+              <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">2</span>
+              Aprovação pelo Administrador
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Após o registro, um administrador do sistema precisará aprovar seu acesso.
+              Você receberá uma notificação quando seu acesso for liberado.
+            </p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 text-yellow-700">
+              <p className="text-sm">
+                Esta etapa de aprovação garante a segurança do sistema e confirma que apenas membros autorizados tenham acesso às informações da equipe.
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-md p-8">
+            <h3 className="text-xl font-semibold mb-4 flex items-center">
+              <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mr-3">3</span>
+              Acesso ao Sistema
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Após a aprovação, você terá acesso completo ao sistema e suas funcionalidades, 
+              de acordo com seu perfil de usuário.
+            </p>
+            <div className="flex space-x-4 justify-center mt-6">
+              <Link
+                href="/sign-in"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Entrar no Sistema
+              </Link>
+              <Link
+                href="/sign-up"
+                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Novo Cadastro
+              </Link>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Features */}
-        <div className="bg-white py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h3 className="text-base text-primary-600 font-semibold tracking-wide uppercase">Funcionalidades</h3>
-              <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                Tudo em um só lugar
-              </p>
-              <p className="mt-4 max-w-2xl text-xl text-gray-500 mx-auto">
-                Gerencie todos os integrantes da equipe em uma única plataforma.
-              </p>
+      {/* Rodapé */}
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <h2 className="text-xl font-bold">Sistema Coringas</h2>
+              <p className="text-gray-400">Plataforma de gestão para a equipe</p>
             </div>
-
-            <div className="mt-12">
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="bg-gray-50 rounded-xl p-8 hover:shadow-md transition-shadow">
-                  <div className="inline-flex items-center justify-center p-3 bg-primary-100 rounded-md text-primary-600 mb-4">
-                    <Groups className="h-8 w-8" />
-                  </div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">Gestão de Integrantes</h4>
-                  <p className="text-gray-500">
-                    Gerencie todos os dados e informações dos integrantes da equipe em um único lugar.
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-8 hover:shadow-md transition-shadow">
-                  <div className="inline-flex items-center justify-center p-3 bg-primary-100 rounded-md text-primary-600 mb-4">
-                    <Security className="h-8 w-8" />
-                  </div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">Autenticação Segura</h4>
-                  <p className="text-gray-500">
-                    Login integrado com o Google e aprovação de novos usuários pelo administrador.
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-8 hover:shadow-md transition-shadow">
-                  <div className="inline-flex items-center justify-center p-3 bg-primary-100 rounded-md text-primary-600 mb-4">
-                    <Person className="h-8 w-8" />
-                  </div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">Perfis Personalizados</h4>
-                  <p className="text-gray-500">
-                    Cada integrante possui seu perfil completo com todas as informações necessárias.
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-8 hover:shadow-md transition-shadow">
-                  <div className="inline-flex items-center justify-center p-3 bg-primary-100 rounded-md text-primary-600 mb-4">
-                    <CheckCircle className="h-8 w-8" />
-                  </div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">Administração Simples</h4>
-                  <p className="text-gray-500">
-                    Interface administrativa intuitiva para os gestores da equipe.
-                  </p>
-                </div>
-              </div>
+            <div className="text-gray-400 text-sm">
+              © {new Date().getFullYear()} Sistema Coringas. Todos os direitos reservados.
             </div>
           </div>
-        </div>
-      </main>
-
-      <footer className="bg-white border-t">
-        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} Sistema Coringas. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>
