@@ -93,6 +93,7 @@ export default function ProfilePage() {
   const [statusOptions, setStatusOptions] = useState<{id: string, name: string}[]>([]);
   const [roleOptions, setRoleOptions] = useState<{id: string, name: string}[]>([]);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [incompleteFields, setIncompleteFields] = useState<string[]>([]);
   const [userData, setUserData] = useState<{
     id: string;
     name: string;
@@ -127,6 +128,38 @@ export default function ProfilePage() {
     }
   });
 
+  // Função para verificar campos incompletos
+  const checkIncompleteFields = (profile: any) => {
+    const requiredFields = [
+      { name: 'nickname', label: 'Apelido' },
+      { name: 'status', label: 'Status' },
+      { name: 'role', label: 'Função' },
+      { name: 'shirt_size', label: 'Tamanho da Camiseta' },
+      { name: 'birth_date', label: 'Data de Nascimento' },
+      { name: 'cpf', label: 'CPF' },
+      { name: 'gender', label: 'Gênero' },
+      { name: 'phone', label: 'Telefone' },
+      { name: 'profession', label: 'Profissão' },
+      { name: 'is_blood_donor', label: 'Doador de Sangue' },
+    ];
+
+    const incomplete = requiredFields.filter(field => {
+      // Se o campo for is_blood_donor, verificamos se é null (não respondido)
+      if (field.name === 'is_blood_donor') {
+        return profile[field.name] === null;
+      }
+      
+      // Se não for doador, não validamos última doação
+      if (field.name === 'last_blood_donation') {
+        return profile.is_blood_donor === true && !profile[field.name];
+      }
+      
+      return !profile[field.name];
+    });
+
+    setIncompleteFields(incomplete.map(field => field.label));
+  };
+
   // Buscar dados do perfil e opções
   useEffect(() => {
     async function fetchData() {
@@ -151,6 +184,11 @@ export default function ProfilePage() {
           .single();
         
         setProfileData(profile);
+        
+        // Verificar campos incompletos
+        if (profile) {
+          checkIncompleteFields(profile);
+        }
 
         // Preencher formulário
         if (profile) {
@@ -219,10 +257,14 @@ export default function ProfilePage() {
       if (error) throw error;
 
       // Atualizar dados locais
-      setProfileData({
+      const updatedProfile = {
         ...profileData,
         ...data
-      });
+      };
+      setProfileData(updatedProfile);
+      
+      // Verificar campos incompletos após atualização
+      checkIncompleteFields(updatedProfile);
 
       setMessage({
         type: 'success',
@@ -359,6 +401,32 @@ export default function ProfilePage() {
                   <Warning className="mr-2 text-red-500" fontSize="small" />
                 )}
                 {message.text}
+              </motion.div>
+            )}
+
+            {/* Aviso de campos incompletos */}
+            {!isEditing && incompleteFields.length > 0 && (
+              <motion.div 
+                className="mx-6 mt-6 p-4 rounded-md bg-yellow-50 text-yellow-800 flex items-start"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Warning className="mr-2 mt-0.5 text-yellow-600" fontSize="small" />
+                <div>
+                  <p className="font-medium">Seu perfil está incompleto</p>
+                  <p className="text-sm mt-1">Os seguintes campos precisam ser preenchidos:</p>
+                  <ul className="list-disc list-inside text-sm mt-1">
+                    {incompleteFields.map((field, index) => (
+                      <li key={index}>{field}</li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="mt-2 text-sm font-medium text-yellow-800 hover:text-yellow-900 underline"
+                  >
+                    Completar perfil
+                  </button>
+                </div>
               </motion.div>
             )}
 
