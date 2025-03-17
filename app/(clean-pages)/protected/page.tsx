@@ -50,9 +50,11 @@ export default function ProtectedPage() {
   }, [router]);
   
   return (
-    <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
-      <p className="text-center">Redirecionando para a página adequada...</p>
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md text-center">
+        <p className="text-xl text-gray-700">Redirecionando para a página adequada...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
+      </div>
     </div>
   );
-}
+} 

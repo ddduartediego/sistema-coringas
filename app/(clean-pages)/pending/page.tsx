@@ -52,21 +52,23 @@ export default function PendingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
-        <div className="flex justify-center mb-6">
-          <PendingActions className="text-yellow-500 text-6xl" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md text-center">
+        <div className="flex justify-center">
+          <div className="bg-yellow-100 p-3 rounded-full">
+            <PendingActions className="text-yellow-500 text-4xl" />
+          </div>
         </div>
         
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">Aprovação Pendente</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Aprovação Pendente</h1>
         
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600">
           Seu acesso ao Sistema Coringas está pendente de aprovação por um administrador. 
           Você receberá uma notificação quando sua conta for aprovada.
         </p>
         
         {email && (
-          <div className="bg-gray-50 p-3 rounded-md mb-6">
+          <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
             <p className="text-sm text-gray-500">Conta registrada</p>
             <p className="text-gray-700 font-medium">{email}</p>
           </div>
@@ -74,7 +76,7 @@ export default function PendingPage() {
         
         <button
           onClick={handleSignOut}
-          className="flex items-center justify-center w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors"
+          className="flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
         >
           <ExitToApp className="mr-2" />
           Sair

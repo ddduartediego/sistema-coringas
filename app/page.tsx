@@ -68,8 +68,11 @@ export default function HomePage() {
             Sistema desenvolvido para apoiar na gestão da equipe
           </p>
           <div className="flex space-x-4">
+            <Link href="/sign-in" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+              Entrar <FaArrowRight className="ml-2" />
+            </Link>
             <Link href="/sign-up" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-              Começar agora <FaArrowRight className="ml-2" />
+              Cadastre-se <FaArrowRight className="ml-2" />
             </Link>
             <a href="#features" className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
               Saiba mais
