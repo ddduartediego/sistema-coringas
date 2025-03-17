@@ -10,7 +10,8 @@ import {
   Menu as MenuIcon,
   Close as CloseIcon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AttachMoney
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -120,6 +121,23 @@ export default function Sidebar({ isAdmin, onCollapse }: SidebarProps) {
               >
                 <Dashboard className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>Administração</span>}
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link 
+                href="/cobrancas" 
+                className={`
+                  flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 rounded-lg transition-colors
+                  ${isLinkActive('/cobrancas') 
+                    ? 'bg-primary-50 text-primary-700 font-medium' 
+                    : 'text-gray-600 hover:bg-gray-50'}
+                `}
+                onClick={closeSidebarOnMobile}
+                title={isCollapsed ? "Cobranças" : ""}
+              >
+                <AttachMoney className={isCollapsed ? '' : 'mr-3'} />
+                {!isCollapsed && <span>Cobranças</span>}
               </Link>
             )}
 
