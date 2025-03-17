@@ -141,6 +141,7 @@ export default function ProfilePage() {
       { name: 'phone', label: 'Telefone' },
       { name: 'profession', label: 'Profissão' },
       { name: 'is_blood_donor', label: 'Doador de Sangue' },
+      { name: 'last_blood_donation', label: 'Última Doação' },
     ];
 
     const incomplete = requiredFields.filter(field => {
@@ -149,11 +150,12 @@ export default function ProfilePage() {
         return profile[field.name] === null;
       }
       
-      // Se não for doador, não validamos última doação
+      // Se for última doação, só validamos se for doador
       if (field.name === 'last_blood_donation') {
         return profile.is_blood_donor === true && !profile[field.name];
       }
       
+      // Para os demais campos
       return !profile[field.name];
     });
 
