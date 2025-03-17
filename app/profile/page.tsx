@@ -21,6 +21,8 @@ import {
   Check,
   Warning
 } from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import CobrancasIntegrante from './components/CobrancasIntegrante';
 
 // Importar o framer-motion dinamicamente para evitar erros de SSR
 const MotionDiv = dynamic(() => 
@@ -86,10 +88,12 @@ export default function ProfilePage() {
   const [roleOptions, setRoleOptions] = useState<{id: string, name: string}[]>([]);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [userData, setUserData] = useState<{
+    id: string;
     name: string;
     email: string;
     avatar_url: string;
   }>({
+    id: '',
     name: '',
     email: '',
     avatar_url: '',
@@ -125,6 +129,7 @@ export default function ProfilePage() {
 
         // Buscar dados do usuário autenticado
         setUserData({
+          id: session.user.id,
           name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Usuário',
           email: session.user.email || '',
           avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
@@ -279,36 +284,45 @@ export default function ProfilePage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8 flex justify-center">
-        <div className="w-full max-w-md">
-          <MotionComponent 
-            className="bg-white rounded-lg shadow-md overflow-hidden"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Cabeçalho com foto de perfil */}
-            <div className="bg-blue-600 p-6 flex flex-col items-center">
-              <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden mb-3">
-                {userData.avatar_url ? (
-                  <img 
-                    src={userData.avatar_url} 
-                    alt="Foto de perfil" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-blue-400 flex items-center justify-center">
-                    <Person className="text-white text-4xl" />
-                  </div>
-                )}
-              </div>
-              <h1 className="text-white text-xl font-semibold">{userData.name}</h1>
-              <p className="text-blue-100 text-sm">{userData.email}</p>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header com foto de perfil */}
+        <motion.div 
+          className="bg-white rounded-lg shadow-md overflow-hidden mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="bg-blue-600 p-6 flex flex-col items-center">
+            <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden mb-3">
+              {userData.avatar_url ? (
+                <img 
+                  src={userData.avatar_url} 
+                  alt="Foto de perfil" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-blue-400 flex items-center justify-center">
+                  <Person className="text-white text-4xl" />
+                </div>
+              )}
             </div>
+            <h1 className="text-white text-xl font-semibold">{userData.name}</h1>
+            <p className="text-blue-100 text-sm">{userData.email}</p>
+          </div>
+        </motion.div>
 
+        {/* Grid com Informações Pessoais e Cobranças */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Informações Pessoais */}
+          <motion.div 
+            className="bg-white rounded-lg shadow-md overflow-hidden h-fit"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             {/* Mensagem de sucesso/erro */}
             {message && (
-              <MotionComponent 
+              <motion.div 
                 className={`mx-6 mt-6 p-4 rounded-md flex items-center ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -320,7 +334,7 @@ export default function ProfilePage() {
                   <Warning className="mr-2 text-red-500" fontSize="small" />
                 )}
                 {message.text}
-              </MotionComponent>
+              </motion.div>
             )}
 
             {/* Informações do perfil */}
@@ -571,7 +585,22 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-          </MotionComponent>
+          </motion.div>
+
+          {/* Cobranças */}
+          <motion.div
+            className="bg-white rounded-lg shadow-md overflow-hidden"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="p-6">
+              <CobrancasIntegrante 
+                supabase={supabase} 
+                userId={userData.id} 
+              />
+            </div>
+          </motion.div>
         </div>
       </div>
     </AppLayout>

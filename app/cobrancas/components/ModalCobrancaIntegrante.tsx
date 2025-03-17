@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Dialog } from '@headlessui/react';
 import { Close, CheckCircle, Payment, Edit, Save } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/database.types';
+import AlertaPersonalizado from './AlertaPersonalizado';
 
 interface Parcela {
   id: string;
@@ -36,11 +40,11 @@ interface CobrancaIntegrante {
 }
 
 interface ModalCobrancaIntegranteProps {
-  supabase: any;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  cobrancaIntegranteId: string;
+  supabase: SupabaseClient<Database>;
+  cobrancaIntegranteId?: string;
 }
 
 export default function ModalCobrancaIntegrante({
@@ -60,6 +64,15 @@ export default function ModalCobrancaIntegrante({
   const [anoVencimento, setAnoVencimento] = useState(new Date().getFullYear());
   const [parcelas, setParcelas] = useState<Parcela[]>([]);
   const [parcelasEditadas, setParcelasEditadas] = useState<Parcela[]>([]);
+  const [alerta, setAlerta] = useState<{
+    mensagem: string;
+    tipo: 'sucesso' | 'erro' | 'info';
+    aberto: boolean;
+  }>({
+    mensagem: '',
+    tipo: 'erro',
+    aberto: false
+  });
   
   // Reinicializar estado quando o modal é fechado
   useEffect(() => {
@@ -198,7 +211,11 @@ export default function ModalCobrancaIntegrante({
       if (editandoCobranca) {
         // Validar parcelas
         if (parcelasEditadas.length > 0 && !validarParcelas()) {
-          alert('A soma dos valores das parcelas deve ser igual ao valor total da cobrança.');
+          setAlerta({
+            mensagem: 'A soma dos valores das parcelas deve ser igual ao valor total da cobrança.',
+            tipo: 'erro',
+            aberto: true
+          });
           setSaving(false);
           return;
         }
@@ -208,7 +225,11 @@ export default function ModalCobrancaIntegrante({
         
         if (!cobrancaId) {
           console.error('ID da cobrança não encontrado');
-          alert('Erro ao identificar a cobrança. Tente novamente.');
+          setAlerta({
+            mensagem: 'Erro ao identificar a cobrança. Tente novamente.',
+            tipo: 'erro',
+            aberto: true
+          });
           setSaving(false);
           return;
         }
@@ -229,7 +250,11 @@ export default function ModalCobrancaIntegrante({
         
         if (cobrancaError) {
           console.error('Erro ao atualizar cobrança:', cobrancaError.message || 'Erro desconhecido');
-          alert('Erro ao atualizar cobrança. Tente novamente.');
+          setAlerta({
+            mensagem: 'Erro ao atualizar cobrança. Tente novamente.',
+            tipo: 'erro',
+            aberto: true
+          });
           setSaving(false);
           return;
         }
@@ -249,7 +274,11 @@ export default function ModalCobrancaIntegrante({
             
             if (parcelaError) {
               console.error('Erro ao atualizar parcela:', parcelaError.message || 'Erro desconhecido');
-              alert('Erro ao atualizar parcelas. Tente novamente.');
+              setAlerta({
+                mensagem: 'Erro ao atualizar parcelas. Tente novamente.',
+                tipo: 'erro',
+                aberto: true
+              });
               setSaving(false);
               return;
             }
@@ -263,7 +292,11 @@ export default function ModalCobrancaIntegrante({
       onClose();
     } catch (error: any) {
       console.error('Erro ao salvar alterações:', error?.message || 'Erro desconhecido');
-      alert('Ocorreu um erro ao salvar as alterações. Tente novamente.');
+      setAlerta({
+        mensagem: 'Ocorreu um erro ao salvar as alterações. Tente novamente.',
+        tipo: 'erro',
+        aberto: true
+      });
     } finally {
       setSaving(false);
     }
@@ -309,259 +342,269 @@ export default function ModalCobrancaIntegrante({
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
-        {/* Cabeçalho */}
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Editar Detalhes da Cobrança
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            disabled={saving}
-          >
-            <Close />
-          </button>
-        </div>
-        
-        {/* Conteúdo */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <div className="flex justify-center items-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          ) : cobrancaIntegrante ? (
-            <div className="space-y-6">
-              {/* Informações da cobrança */}
-              <div className="bg-gray-50 p-4 rounded-md">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">Detalhes da Cobrança</h3>
-                  <button 
-                    onClick={() => setEditandoCobranca(!editandoCobranca)}
-                    className="text-blue-600 hover:text-blue-800"
-                    title={editandoCobranca ? "Cancelar edição" : "Editar cobrança"}
-                  >
-                    {editandoCobranca ? <Close fontSize="small" /> : <Edit fontSize="small" />}
-                  </button>
-                </div>
-                
-                {editandoCobranca ? (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Nome da Cobrança
-                      </label>
-                      <input
-                        type="text"
-                        value={nomeCobranca}
-                        onChange={(e) => setNomeCobranca(e.target.value)}
-                        className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Valor (R$)
-                      </label>
-                      <input
-                        type="number"
-                        value={valorCobranca}
-                        onChange={(e) => setValorCobranca(parseFloat(e.target.value) || 0)}
-                        className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        min="0"
-                        step="0.01"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+          {/* Cabeçalho */}
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Editar Detalhes da Cobrança
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+              disabled={saving}
+            >
+              <Close />
+            </button>
+          </div>
+          
+          {/* Conteúdo */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : cobrancaIntegrante ? (
+              <div className="space-y-6">
+                {/* Informações da cobrança */}
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">Detalhes da Cobrança</h3>
+                    <button 
+                      onClick={() => setEditandoCobranca(!editandoCobranca)}
+                      className="text-blue-600 hover:text-blue-800"
+                      title={editandoCobranca ? "Cancelar edição" : "Editar cobrança"}
+                    >
+                      {editandoCobranca ? <Close fontSize="small" /> : <Edit fontSize="small" />}
+                    </button>
+                  </div>
+                  
+                  {editandoCobranca ? (
+                    <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Mês de Vencimento
+                          Nome da Cobrança
                         </label>
-                        <select
-                          value={mesVencimento}
-                          onChange={(e) => setMesVencimento(parseInt(e.target.value))}
+                        <input
+                          type="text"
+                          value={nomeCobranca}
+                          onChange={(e) => setNomeCobranca(e.target.value)}
                           className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
-                            <option key={mes} value={mes}>
-                              {formatarMes(mes)}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Ano de Vencimento
+                          Valor (R$)
                         </label>
-                        <select
-                          value={anoVencimento}
-                          onChange={(e) => setAnoVencimento(parseInt(e.target.value))}
+                        <input
+                          type="number"
+                          value={valorCobranca}
+                          onChange={(e) => setValorCobranca(parseFloat(e.target.value) || 0)}
                           className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          {getAnos().map((ano) => (
-                            <option key={ano} value={ano}>
-                              {ano}
-                            </option>
-                          ))}
-                        </select>
+                          min="0"
+                          step="0.01"
+                        />
                       </div>
-                    </div>
-                    
-                    {/* Parcelas (se existirem) */}
-                    {parcelasEditadas.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-700 mb-1">Parcelas</h4>
-                        <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                  Parcela
-                                </th>
-                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                  Vencimento
-                                </th>
-                                <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                  Valor
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {parcelasEditadas.map((parcela, index) => (
-                                <tr key={parcela.id}>
-                                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
-                                    {parcela.numero_parcela}/{parcelasEditadas.length}
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Mês de Vencimento
+                          </label>
+                          <select
+                            value={mesVencimento}
+                            onChange={(e) => setMesVencimento(parseInt(e.target.value))}
+                            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
+                              <option key={mes} value={mes}>
+                                {formatarMes(mes)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Ano de Vencimento
+                          </label>
+                          <select
+                            value={anoVencimento}
+                            onChange={(e) => setAnoVencimento(parseInt(e.target.value))}
+                            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {getAnos().map((ano) => (
+                              <option key={ano} value={ano}>
+                                {ano}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Parcelas (se existirem) */}
+                      {parcelasEditadas.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-gray-700 mb-1">Parcelas</h4>
+                          <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                    Parcela
+                                  </th>
+                                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                    Vencimento
+                                  </th>
+                                  <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                    Valor
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {parcelasEditadas.map((parcela, index) => (
+                                  <tr key={parcela.id}>
+                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                                      {parcela.numero_parcela}/{parcelasEditadas.length}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                      <div className="flex space-x-1">
+                                        <select
+                                          value={parcela.mes_vencimento}
+                                          onChange={(e) => atualizarParcela(index, 'mes_vencimento', parseInt(e.target.value))}
+                                          className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        >
+                                          {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
+                                            <option key={mes} value={mes}>
+                                              {formatarMes(mes).substring(0, 3)}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <select
+                                          value={parcela.ano_vencimento}
+                                          onChange={(e) => atualizarParcela(index, 'ano_vencimento', parseInt(e.target.value))}
+                                          className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        >
+                                          {getAnos().map((ano) => (
+                                            <option key={ano} value={ano}>
+                                              {ano}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
+                                      <input
+                                        type="number"
+                                        value={parcela.valor}
+                                        onChange={(e) => atualizarParcela(index, 'valor', parseFloat(e.target.value) || 0)}
+                                        className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-20"
+                                        min="0"
+                                        step="0.01"
+                                      />
+                                    </td>
+                                  </tr>
+                                ))}
+                                {/* Linha de total */}
+                                <tr className="bg-gray-50">
+                                  <td colSpan={2} className="px-3 py-2 text-xs font-medium text-gray-700 text-right">
+                                    Total:
                                   </td>
-                                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
-                                    <div className="flex space-x-1">
-                                      <select
-                                        value={parcela.mes_vencimento}
-                                        onChange={(e) => atualizarParcela(index, 'mes_vencimento', parseInt(e.target.value))}
-                                        className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                      >
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
-                                          <option key={mes} value={mes}>
-                                            {formatarMes(mes).substring(0, 3)}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      <select
-                                        value={parcela.ano_vencimento}
-                                        onChange={(e) => atualizarParcela(index, 'ano_vencimento', parseInt(e.target.value))}
-                                        className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                      >
-                                        {getAnos().map((ano) => (
-                                          <option key={ano} value={ano}>
-                                            {ano}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                  </td>
-                                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">
-                                    <input
-                                      type="number"
-                                      value={parcela.valor}
-                                      onChange={(e) => atualizarParcela(index, 'valor', parseFloat(e.target.value) || 0)}
-                                      className="p-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 w-20"
-                                      min="0"
-                                      step="0.01"
-                                    />
+                                  <td className="px-3 py-2 text-xs font-medium text-gray-700">
+                                    {formatarValor(parcelasEditadas.reduce((total, p) => total + p.valor, 0))}
+                                    {!validarParcelas() && (
+                                      <span className="ml-2 text-xs text-red-500">
+                                        (Diferente do valor total)
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
-                              ))}
-                              {/* Linha de total */}
-                              <tr className="bg-gray-50">
-                                <td colSpan={2} className="px-3 py-2 text-xs font-medium text-gray-700 text-right">
-                                  Total:
-                                </td>
-                                <td className="px-3 py-2 text-xs font-medium text-gray-700">
-                                  {formatarValor(parcelasEditadas.reduce((total, p) => total + p.valor, 0))}
-                                  {!validarParcelas() && (
-                                    <span className="ml-2 text-xs text-red-500">
-                                      (Diferente do valor total)
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Nome:</span>
+                        <span className="text-sm font-medium">{nomeCobranca || cobrancaIntegrante.cobranca?.nome || 'Não informado'}</span>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Nome:</span>
-                      <span className="text-sm font-medium">{nomeCobranca || cobrancaIntegrante.cobranca?.nome || 'Não informado'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Valor:</span>
-                      <span className="text-sm font-medium">{formatarValor(valorCobranca || cobrancaIntegrante.cobranca?.valor || 0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Vencimento:</span>
-                      <span className="text-sm font-medium">
-                        {formatarMes(mesVencimento || cobrancaIntegrante.cobranca?.mes_vencimento || 1)}/{anoVencimento || cobrancaIntegrante.cobranca?.ano_vencimento || new Date().getFullYear()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Integrante:</span>
-                      <span className="text-sm font-medium">{cobrancaIntegrante.integrante?.nome || 'Não informado'}</span>
-                    </div>
-                    {parcelas.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-sm text-gray-500 mb-1">Parcelas:</div>
-                        <div className="bg-white border border-gray-200 rounded-md p-2 text-xs">
-                          {parcelas.map((parcela) => (
-                            <div key={parcela.id} className="flex justify-between mb-1 last:mb-0">
-                              <span>{parcela.numero_parcela}/{parcelas.length} - {formatarMes(parcela.mes_vencimento).substring(0, 3)}/{parcela.ano_vencimento}</span>
-                              <span className="font-medium">{formatarValor(parcela.valor)}</span>
-                            </div>
-                          ))}
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Valor:</span>
+                        <span className="text-sm font-medium">{formatarValor(valorCobranca || cobrancaIntegrante.cobranca?.valor || 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Vencimento:</span>
+                        <span className="text-sm font-medium">
+                          {formatarMes(mesVencimento || cobrancaIntegrante.cobranca?.mes_vencimento || 1)}/{anoVencimento || cobrancaIntegrante.cobranca?.ano_vencimento || new Date().getFullYear()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Integrante:</span>
+                        <span className="text-sm font-medium">{cobrancaIntegrante.integrante?.nome || 'Não informado'}</span>
+                      </div>
+                      {parcelas.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-sm text-gray-500 mb-1">Parcelas:</div>
+                          <div className="bg-white border border-gray-200 rounded-md p-2 text-xs">
+                            {parcelas.map((parcela) => (
+                              <div key={parcela.id} className="flex justify-between mb-1 last:mb-0">
+                                <span>{parcela.numero_parcela}/{parcelas.length} - {formatarMes(parcela.mes_vencimento).substring(0, 3)}/{parcela.ano_vencimento}</span>
+                                <span className="font-medium">{formatarValor(parcela.valor)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              Cobrança não encontrada.
-            </div>
-          )}
-        </div>
-        
-        {/* Rodapé */}
-        <div className="p-4 border-t border-gray-200 flex justify-end space-x-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-            disabled={saving}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={salvarAlteracoes}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
-            disabled={saving || loading || !cobrancaIntegrante || (editandoCobranca && parcelasEditadas.length > 0 && !validarParcelas())}
-          >
-            {saving ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
             ) : (
-              <Save className="h-4 w-4 mr-2" />
+              <div className="text-center py-4 text-gray-500">
+                Cobrança não encontrada.
+              </div>
             )}
-            Salvar
-          </button>
+          </div>
+          
+          {/* Rodapé */}
+          <div className="p-4 border-t border-gray-200 flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={salvarAlteracoes}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+              disabled={saving || loading || !cobrancaIntegrante || (editandoCobranca && parcelasEditadas.length > 0 && !validarParcelas())}
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salvar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Alerta Personalizado */}
+      <AlertaPersonalizado
+        mensagem={alerta.mensagem}
+        tipo={alerta.tipo}
+        open={alerta.aberto}
+        onClose={() => setAlerta(prev => ({ ...prev, aberto: false }))}
+      />
+    </>
   );
 } 

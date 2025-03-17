@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Edit, CheckCircle, Delete } from '@mui/icons-material';
+import { useState } from 'react';
+import { Search, Edit, CheckCircle, Delete, Close } from '@mui/icons-material';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/database.types';
+import ModalRegistrarPagamento from './ModalRegistrarPagamento';
 
 interface Cobranca {
   id: string;
@@ -28,20 +31,26 @@ interface ListaCobrancasProps {
   cobrancas: Cobranca[];
   integrantes: Integrante[];
   onEditarCobranca: (id: string) => void;
-  onMarcarComoPago?: (id: string) => void;
   onExcluirCobranca?: (id: string, cobrancaId: string) => void;
+  supabase: SupabaseClient<Database>;
+  onUpdate: () => void;
 }
 
-export default function ListaCobrancas({
+export default function ListaCobrancas({ 
   cobrancas,
   integrantes,
   onEditarCobranca,
-  onMarcarComoPago,
-  onExcluirCobranca
+  onExcluirCobranca,
+  supabase,
+  onUpdate
 }: ListaCobrancasProps) {
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   const [filtroIntegrante, setFiltroIntegrante] = useState<string>('');
   const [filtroNome, setFiltroNome] = useState<string>('');
+  const [cobrancaSelecionada, setCobrancaSelecionada] = useState<string | null>(null);
+  const [modalRegistrarPagamentoAberto, setModalRegistrarPagamentoAberto] = useState(false);
+  const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
+  const [cobrancaParaExcluir, setCobrancaParaExcluir] = useState<{id: string, cobrancaId: string} | null>(null);
   
   // Filtrar cobranças
   const cobrancasFiltradas = cobrancas.filter((cobranca) => {
@@ -75,6 +84,30 @@ export default function ListaCobrancas({
     ];
     
     return meses[mes - 1];
+  };
+
+  const handleMarcarComoPago = (cobrancaId: string) => {
+    setCobrancaSelecionada(cobrancaId);
+    setModalRegistrarPagamentoAberto(true);
+  };
+
+  const handleRegistroPagamentoSucesso = () => {
+    setModalRegistrarPagamentoAberto(false);
+    setCobrancaSelecionada(null);
+    onUpdate();
+  };
+
+  const handleExcluirCobranca = (id: string, cobrancaId: string) => {
+    setCobrancaParaExcluir({ id, cobrancaId });
+    setModalConfirmacaoAberto(true);
+  };
+
+  const confirmarExclusao = () => {
+    if (cobrancaParaExcluir && onExcluirCobranca) {
+      onExcluirCobranca(cobrancaParaExcluir.id, cobrancaParaExcluir.cobrancaId);
+    }
+    setModalConfirmacaoAberto(false);
+    setCobrancaParaExcluir(null);
   };
   
   return (
@@ -127,7 +160,7 @@ export default function ListaCobrancas({
           </div>
         </div>
       </div>
-      
+
       {/* Lista de cobranças */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
@@ -193,31 +226,27 @@ export default function ListaCobrancas({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={() => onEditarCobranca(cobranca.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
-                        >
-                          <Edit fontSize="small" />
-                        </button>
-                        
-                        {cobranca.status !== 'Pago' && onMarcarComoPago && (
-                          <button
-                            onClick={() => onMarcarComoPago(cobranca.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Marcar como Pago"
-                          >
-                            <CheckCircle fontSize="small" />
-                          </button>
+                        {cobranca.status !== 'Pago' && (
+                          <>
+                            <button
+                              onClick={() => onEditarCobranca(cobranca.id)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Editar"
+                            >
+                              <Edit fontSize="small" />
+                            </button>
+                            <button
+                              onClick={() => handleMarcarComoPago(cobranca.id)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Marcar como Pago"
+                            >
+                              <CheckCircle fontSize="small" />
+                            </button>
+                          </>
                         )}
-                        
                         {onExcluirCobranca && (
                           <button
-                            onClick={() => {
-                              if (window.confirm('Tem certeza que deseja excluir esta cobrança? Esta ação não pode ser desfeita.')) {
-                                onExcluirCobranca(cobranca.id, cobranca.cobrancaId);
-                              }
-                            }}
+                            onClick={() => handleExcluirCobranca(cobranca.id, cobranca.cobrancaId)}
                             className="text-red-600 hover:text-red-900"
                             title="Excluir Cobrança"
                           >
@@ -233,6 +262,74 @@ export default function ListaCobrancas({
           </table>
         </div>
       </div>
+
+      {/* Modal de Registro de Pagamento */}
+      {cobrancaSelecionada && (
+        <ModalRegistrarPagamento
+          open={modalRegistrarPagamentoAberto}
+          onClose={() => {
+            setModalRegistrarPagamentoAberto(false);
+            setCobrancaSelecionada(null);
+          }}
+          cobrancaId={cobrancaSelecionada}
+          supabase={supabase}
+          onSuccess={handleRegistroPagamentoSucesso}
+        />
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {modalConfirmacaoAberto && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4">
+            {/* Overlay */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
+              onClick={() => setModalConfirmacaoAberto(false)}
+            />
+
+            {/* Modal */}
+            <div className="relative bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+              {/* Botão Fechar */}
+              <button
+                onClick={() => setModalConfirmacaoAberto(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
+              >
+                <Close fontSize="small" />
+              </button>
+
+              {/* Título */}
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Confirmar Exclusão
+              </h3>
+
+              {/* Conteúdo */}
+              <div className="mb-6">
+                <p className="text-sm text-gray-500">
+                  Tem certeza que deseja excluir esta cobrança? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                  onClick={() => setModalConfirmacaoAberto(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  onClick={confirmarExclusao}
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
