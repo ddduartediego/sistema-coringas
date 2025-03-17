@@ -13,6 +13,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLeader, setIsLeader] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -50,6 +51,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       }
 
       setIsAdmin(profile.is_admin || false);
+      setIsLeader(profile.is_leader || false);
       setUserEmail(session.user.email || null);
       setUserName(profile.name || session.user.user_metadata?.name || null);
       setLoading(false);
@@ -73,7 +75,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isAdmin={isAdmin} onCollapse={updateSidebarState} />
+      <Sidebar isAdmin={isAdmin} isLeader={isLeader} onCollapse={updateSidebarState} />
       
       <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         {/* Main content */}

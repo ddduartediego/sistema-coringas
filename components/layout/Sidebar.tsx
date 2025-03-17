@@ -17,10 +17,11 @@ import {
 
 interface SidebarProps {
   isAdmin: boolean;
+  isLeader: boolean;
   onCollapse?: (collapsed: boolean) => void;
 }
 
-export default function Sidebar({ isAdmin, onCollapse }: SidebarProps) {
+export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -125,7 +126,7 @@ export default function Sidebar({ isAdmin, onCollapse }: SidebarProps) {
               </Link>
             )}
 
-            {isAdmin && (
+            {isLeader && (
               <Link 
                 href="/lideranca" 
                 className={`

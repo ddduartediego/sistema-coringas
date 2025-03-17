@@ -10,14 +10,18 @@ export async function middleware(request: NextRequest) {
   // Rotas públicas (acessíveis sem login)
   const publicRoutes = ["/", "/sign-in", "/sign-up", "/auth/callback"];
   // Rotas protegidas (requerem login)
-  const protectedRoutes = ["/admin", "/profile", "/settings", "/pending"];
+  const protectedRoutes = ["/admin", "/profile", "/settings", "/pending", "/lideranca"];
   
   // Rotas específicas de administrador
   const adminRoutes = ["/admin", "/settings"];
   
+  // Rotas específicas de liderança
+  const leaderRoutes = ["/lideranca"];
+  
   // Verificar se a rota atual é protegida
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
+  const isLeaderRoute = leaderRoutes.some(route => pathname.startsWith(route));
   
   if (isProtectedRoute) {
     // Criar cookie store do Next.js compatível com middleware
@@ -90,6 +94,27 @@ export async function middleware(request: NextRequest) {
       if (profile && !profile.is_approved) {
         // Se não for aprovado, redirecionar para página de pendência
         const redirectUrl = new URL("/pending", request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+    }
+
+    // Se estiver em rota de liderança, verificar se é líder
+    if (isLeaderRoute) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_leader, is_approved')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (!profile || !profile.is_approved) {
+        // Se não for aprovado, redirecionar para página de pendência
+        const redirectUrl = new URL("/pending", request.url);
+        return NextResponse.redirect(redirectUrl);
+      }
+      
+      if (!profile.is_leader) {
+        // Se não for líder, redirecionar para perfil
+        const redirectUrl = new URL("/profile", request.url);
         return NextResponse.redirect(redirectUrl);
       }
     }
