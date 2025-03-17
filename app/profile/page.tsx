@@ -74,7 +74,9 @@ const profileSchema = z.object({
   shirt_size: z.string().min(1, 'Tamanho da camiseta é obrigatório'),
   birth_date: z.string().optional().nullable(),
   cpf: z.string().optional().nullable(),
-  gender: z.string().optional().nullable(),
+  gender: z.string().refine((val) => !val || ['Masculino', 'Feminino', 'Prefiro não dizer'].includes(val), {
+    message: 'Gênero deve ser Masculino, Feminino ou Prefiro não dizer'
+  }).nullable(),
   phone: z.string().optional().nullable(),
   profession: z.string().optional().nullable(),
   is_blood_donor: z.boolean().optional().nullable(),
@@ -408,10 +410,28 @@ export default function ProfilePage() {
               </div>
 
               {/* Lista de informações com ícones */}
-              <div className="space-y-6">
-                {/* Apelido */}
+              <div className="space-y-4">
+                {/* Nome */}
                 <div className="flex items-start">
                   <AccountCircle className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Nome</p>
+                    <p className="font-medium">{userData.name}</p>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="flex items-start">
+                  <AccountCircle className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium">{userData.email}</p>
+                  </div>
+                </div>
+
+                {/* Apelido */}
+                <div className="flex items-start">
+                  <Badge className="text-gray-400 mt-1 mr-3" />
                   <div className="flex-1">
                     <p className="text-sm text-gray-500">Apelido</p>
                     {isEditing ? (
@@ -423,16 +443,49 @@ export default function ProfilePage() {
                             <input
                               {...field}
                               type="text"
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              className={`w-full p-2 border ${errors.nickname ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none`}
                             />
                           )}
                         />
                         {errors.nickname && (
-                          <p className="mt-1 text-xs text-red-600">{errors.nickname.message}</p>
+                          <p className="mt-1 text-sm text-red-500">{errors.nickname.message}</p>
                         )}
                       </div>
                     ) : (
                       <p className="font-medium">{profileData?.nickname || '-'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Gênero */}
+                <div className="flex items-start">
+                  <Person className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Gênero</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="gender"
+                          control={control}
+                          render={({ field }) => (
+                            <select
+                              {...field}
+                              value={field.value || ''}
+                              className={`w-full p-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none`}
+                            >
+                              <option value="">Selecione o gênero</option>
+                              <option value="Masculino">Masculino</option>
+                              <option value="Feminino">Feminino</option>
+                              <option value="Prefiro não dizer">Prefiro não dizer</option>
+                            </select>
+                          )}
+                        />
+                        {errors.gender && (
+                          <p className="mt-1 text-sm text-red-500">{errors.gender.message}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.gender || '-'}</p>
                     )}
                   </div>
                 </div>
@@ -614,56 +667,38 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Última Doação */}
-                <div className="flex items-start">
-                  <CalendarMonth className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Última Doação</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="last_blood_donation"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="date"
-                              value={field.value || ''}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">
-                        {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
-                      </p>
-                    )}
-                    {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
-                      <p className="text-sm text-green-600 mt-1">
-                        Você já pode fazer uma nova doação de sangue! 🩸
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Campos status e role ocultos mas necessários para validação */}
-                {isEditing && (
-                  <div className="hidden">
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <input {...field} type="hidden" />
+                {/* Última Doação - Só exibe se for doador */}
+                {(isEditing ? watch('is_blood_donor') : profileData?.is_blood_donor) && (
+                  <div className="flex items-start">
+                    <CalendarMonth className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Última Doação</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="last_blood_donation"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="date"
+                                value={field.value || ''}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">
+                          {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
+                        </p>
                       )}
-                    />
-                    <Controller
-                      name="role"
-                      control={control}
-                      render={({ field }) => (
-                        <input {...field} type="hidden" />
+                      {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
+                        <p className="text-sm text-green-600 mt-1">
+                          Você já pode fazer uma nova doação de sangue! 🩸
+                        </p>
                       )}
-                    />
+                    </div>
                   </div>
                 )}
               </div>
