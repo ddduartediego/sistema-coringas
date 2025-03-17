@@ -51,29 +51,6 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Cabeçalho */}
-      <header className="bg-white shadow-sm py-4">
-        <div className="container mx-auto px-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            {/* Logo do sistema - substitua pelo logo real */}
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">SC</div>
-            <h1 className="text-xl font-bold text-gray-800">Sistema Coringas</h1>
-          </div>
-          <div className="space-x-4">
-            <Link
-              href="/sign-in"
-              className="px-4 py-2 rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              Entrar
-            </Link>
-            <Link
-              href="/sign-up"
-              className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-            >
-              Cadastrar
-            </Link>
-          </div>
-        </div>
-      </header>
 
       {/* Seção principal hero */}
       <section className="container mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center">
