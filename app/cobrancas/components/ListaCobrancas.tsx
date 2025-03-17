@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Edit, CheckCircle, Delete, Close } from '@mui/icons-material';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Edit, CheckCircle, Delete, Close, KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
 import ModalRegistrarPagamento from './ModalRegistrarPagamento';
+import React from 'react';
 
 interface Cobranca {
   id: string;
@@ -36,6 +37,17 @@ interface ListaCobrancasProps {
   onUpdate: () => void;
 }
 
+// Interface para cobranças agrupadas
+interface CobrancaAgrupada {
+  nome: string;
+  valorTotal: number;
+  mesVencimento: number;
+  anoVencimento: number;
+  status: 'Pago' | 'Em Atraso' | 'Pendente';
+  cobrancas: Cobranca[];
+  expandido: boolean;
+}
+
 export default function ListaCobrancas({ 
   cobrancas,
   integrantes,
@@ -51,22 +63,80 @@ export default function ListaCobrancas({
   const [modalRegistrarPagamentoAberto, setModalRegistrarPagamentoAberto] = useState(false);
   const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
   const [cobrancaParaExcluir, setCobrancaParaExcluir] = useState<{id: string, cobrancaId: string} | null>(null);
+  const [gruposExpandidos, setGruposExpandidos] = useState<Record<string, boolean>>({});
   
-  // Filtrar cobranças
-  const cobrancasFiltradas = cobrancas.filter((cobranca) => {
-    // Filtro por status
-    if (filtroStatus === 'pago' && cobranca.status !== 'Pago') return false;
-    if (filtroStatus === 'pendente' && cobranca.status !== 'Pendente') return false;
-    if (filtroStatus === 'atrasado' && !cobranca.emAtraso) return false;
+  // Filtrar cobranças usando useMemo para evitar recálculos desnecessários
+  const cobrancasFiltradas = useMemo(() => {
+    return cobrancas.filter((cobranca) => {
+      // Filtro por status
+      if (filtroStatus === 'pago' && cobranca.status !== 'Pago') return false;
+      if (filtroStatus === 'pendente' && cobranca.status !== 'Pendente') return false;
+      if (filtroStatus === 'atrasado' && !cobranca.emAtraso) return false;
+      
+      // Filtro por integrante
+      if (filtroIntegrante && cobranca.integranteId !== filtroIntegrante) return false;
+      
+      // Filtro por nome da cobrança
+      if (filtroNome && !cobranca.nome.toLowerCase().includes(filtroNome.toLowerCase())) return false;
+      
+      return true;
+    });
+  }, [cobrancas, filtroStatus, filtroIntegrante, filtroNome]);
+  
+  // Agrupar cobranças por nome - também usando useMemo
+  const gruposCobrancas = useMemo(() => {
+    // Criar um mapa para agrupar as cobranças por nome
+    const grupos: Record<string, Cobranca[]> = {};
     
-    // Filtro por integrante
-    if (filtroIntegrante && cobranca.integranteId !== filtroIntegrante) return false;
+    // Agrupar as cobranças por nome
+    cobrancasFiltradas.forEach(cobranca => {
+      if (!grupos[cobranca.nome]) {
+        grupos[cobranca.nome] = [];
+      }
+      grupos[cobranca.nome].push(cobranca);
+    });
     
-    // Filtro por nome da cobrança
-    if (filtroNome && !cobranca.nome.toLowerCase().includes(filtroNome.toLowerCase())) return false;
-    
-    return true;
-  });
+    // Converter o mapa em um array de CobrancaAgrupada
+    return Object.entries(grupos).map(([nome, cobranças]) => {
+      // Calcular valor total
+      const valorTotal = cobranças.reduce((total, c) => total + c.valor, 0);
+      
+      // Determinar status do grupo (Em Atraso > Pendente > Pago)
+      let status: 'Pago' | 'Em Atraso' | 'Pendente' = 'Pago';
+      
+      // Se alguma cobrança estiver em atraso, o grupo está em atraso
+      if (cobranças.some(c => c.emAtraso)) {
+        status = 'Em Atraso';
+      } 
+      // Se não tiver atraso, mas alguma cobrança estiver pendente, o grupo está pendente
+      else if (cobranças.some(c => c.status === 'Pendente')) {
+        status = 'Pendente';
+      }
+      
+      // Pegar mês e ano de vencimento da primeira cobrança
+      // (assumindo que todas as cobranças no mesmo grupo têm o mesmo vencimento)
+      const mesVencimento = cobranças[0].mesVencimento;
+      const anoVencimento = cobranças[0].anoVencimento;
+      
+      return {
+        nome,
+        valorTotal,
+        mesVencimento,
+        anoVencimento,
+        status,
+        cobrancas: cobranças,
+        expandido: gruposExpandidos[nome] || false // Usar estado separado para controlar expansão
+      };
+    });
+  }, [cobrancasFiltradas, gruposExpandidos]);
+  
+  // Alternar expansão do grupo
+  const alternarExpansao = (nome: string) => {
+    setGruposExpandidos(prev => ({
+      ...prev,
+      [nome]: !prev[nome]
+    }));
+  };
   
   // Formatar valor para exibição
   const formatarValor = (valor: number) => {
@@ -171,9 +241,6 @@ export default function ListaCobrancas({
                   Nome
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Integrante
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Valor
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -182,100 +249,134 @@ export default function ListaCobrancas({
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {cobrancasFiltradas.length === 0 ? (
+              {gruposCobrancas.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
                     Nenhuma cobrança encontrada com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
-                cobrancasFiltradas.map((cobranca) => (
-                  <tr key={cobranca.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {cobranca.nome}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {cobranca.integrante}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatarValor(cobranca.valor)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatarMes(cobranca.mesVencimento)}/{cobranca.anoVencimento}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        cobranca.status === 'Pago' 
-                          ? 'bg-green-100 text-green-800' 
-                          : cobranca.emAtraso 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {cobranca.status === 'Pago' 
-                          ? 'Pago' 
-                          : cobranca.emAtraso 
-                            ? 'Em Atraso' 
-                            : 'Pendente'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        {cobranca.status !== 'Pago' && (
-                          <>
-                            <button
-                              onClick={() => onEditarCobranca(cobranca.id)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Editar"
-                            >
-                              <Edit fontSize="small" />
-                            </button>
-                            <button
-                              onClick={() => handleMarcarComoPago(cobranca.id)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Marcar como Pago"
-                            >
-                              <CheckCircle fontSize="small" />
-                            </button>
-                          </>
-                        )}
-                        {onExcluirCobranca && (
-                          <button
-                            onClick={() => handleExcluirCobranca(cobranca.id, cobranca.cobrancaId)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Excluir Cobrança"
-                          >
-                            <Delete fontSize="small" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                gruposCobrancas.map((grupo) => (
+                  <React.Fragment key={grupo.nome}>
+                    {/* Linha do grupo */}
+                    <tr 
+                      className="bg-gray-50 cursor-pointer hover:bg-gray-100"
+                      onClick={() => alternarExpansao(grupo.nome)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
+                        {grupo.expandido ? 
+                          <KeyboardArrowUp className="mr-1 text-gray-500" fontSize="small" /> : 
+                          <KeyboardArrowDown className="mr-1 text-gray-500" fontSize="small" />
+                        }
+                        {grupo.nome}
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({grupo.cobrancas.length} {grupo.cobrancas.length === 1 ? 'integrante' : 'integrantes'})
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {formatarValor(grupo.valorTotal)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {formatarMes(grupo.mesVencimento)}/{grupo.anoVencimento}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          grupo.status === 'Pago' 
+                            ? 'bg-green-100 text-green-800' 
+                            : grupo.status === 'Em Atraso' 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {grupo.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {/* Não há ações para o grupo, apenas para as cobranças individuais */}
+                      </td>
+                    </tr>
+                    
+                    {/* Linhas das cobranças individuais (quando expandidas) */}
+                    {grupo.expandido && grupo.cobrancas.map((cobranca) => (
+                      <tr key={cobranca.id} className="bg-white hover:bg-blue-50">
+                        <td className="px-6 py-3 pl-12 whitespace-nowrap text-sm text-gray-700 border-l-4 border-blue-200">
+                          <span className="font-medium">{cobranca.integrante}</span>
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {formatarValor(cobranca.valor)}
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {formatarMes(cobranca.mesVencimento)}/{cobranca.anoVencimento}
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            cobranca.status === 'Pago' 
+                              ? 'bg-green-100 text-green-800' 
+                              : cobranca.emAtraso 
+                                ? 'bg-red-100 text-red-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {cobranca.status === 'Pago' 
+                              ? 'Pago' 
+                              : cobranca.emAtraso 
+                                ? 'Em Atraso' 
+                                : 'Pendente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            {cobranca.status !== 'Pago' && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditarCobranca(cobranca.id);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Editar"
+                                >
+                                  <Edit fontSize="small" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMarcarComoPago(cobranca.id);
+                                  }}
+                                  className="text-green-600 hover:text-green-900"
+                                  title="Marcar como Pago"
+                                >
+                                  <CheckCircle fontSize="small" />
+                                </button>
+                              </>
+                            )}
+                            {onExcluirCobranca && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleExcluirCobranca(cobranca.id, cobranca.cobrancaId);
+                                }}
+                                className="text-red-600 hover:text-red-900"
+                                title="Excluir Cobrança"
+                              >
+                                <Delete fontSize="small" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))
               )}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Modal de Registro de Pagamento */}
-      {cobrancaSelecionada && (
-        <ModalRegistrarPagamento
-          open={modalRegistrarPagamentoAberto}
-          onClose={() => {
-            setModalRegistrarPagamentoAberto(false);
-            setCobrancaSelecionada(null);
-          }}
-          cobrancaId={cobrancaSelecionada}
-          supabase={supabase}
-          onSuccess={handleRegistroPagamentoSucesso}
-        />
-      )}
 
       {/* Modal de Confirmação de Exclusão */}
       {modalConfirmacaoAberto && (
@@ -329,6 +430,20 @@ export default function ListaCobrancas({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Registro de Pagamento */}
+      {cobrancaSelecionada && (
+        <ModalRegistrarPagamento
+          open={modalRegistrarPagamentoAberto}
+          onClose={() => {
+            setModalRegistrarPagamentoAberto(false);
+            setCobrancaSelecionada(null);
+          }}
+          cobrancaId={cobrancaSelecionada}
+          supabase={supabase}
+          onSuccess={handleRegistroPagamentoSucesso}
+        />
       )}
     </div>
   );
