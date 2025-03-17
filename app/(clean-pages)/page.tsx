@@ -50,8 +50,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Cabeçalho */}
-
       {/* Seção principal hero */}
       <section className="container mx-auto px-4 py-16 md:py-24 flex flex-col md:flex-row items-center">
         <motion.div 
@@ -68,7 +66,7 @@ export default function HomePage() {
             Sistema desenvolvido para apoiar na gestão da equipe
           </p>
           <div className="flex space-x-4">
-            <Link href="/sign-in" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+            <Link href="/sign-in" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
               Entrar <FaArrowRight className="ml-2" />
             </Link>
             <Link href="/sign-up" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
@@ -248,38 +246,9 @@ export default function HomePage() {
               Após a aprovação, você terá acesso completo ao sistema e suas funcionalidades, 
               de acordo com seu perfil de usuário.
             </p>
-            <div className="flex space-x-4 justify-center mt-6">
-              <Link
-                href="/sign-in"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Entrar no Sistema
-              </Link>
-              <Link
-                href="/sign-up"
-                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Novo Cadastro
-              </Link>
-            </div>
           </div>
         </div>
       </section>
-
-      {/* Rodapé */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <h2 className="text-xl font-bold">Sistema Coringas</h2>
-              <p className="text-gray-400">Plataforma de gestão para a equipe</p>
-            </div>
-            <div className="text-gray-400 text-sm">
-              © {new Date().getFullYear()} Sistema Coringas. Todos os direitos reservados.
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
-}
+} 
