@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { Database } from '@/models/database.types';
 import AppLayout from '@/components/layout/AppLayout';
+import dynamic from 'next/dynamic';
 import { 
   Dashboard, 
   CheckCircle, 
@@ -13,8 +14,29 @@ import {
   HourglassEmpty,
   Close,
   FilterList,
-  Search
+  Search,
+  PieChart,
+  Edit
 } from '@mui/icons-material';
+
+// Importar o framer-motion dinamicamente para evitar erros de SSR
+const MotionDiv = dynamic(() => 
+  import('framer-motion').then((mod) => mod.motion.div), 
+  { ssr: false }
+);
+
+interface MotionProps {
+  children: ReactNode;
+  className?: string;
+  initial?: any;
+  animate?: any;
+  exit?: any;
+  transition?: any;
+}
+
+const MotionComponent = ({ children, ...props }: MotionProps) => (
+  <MotionDiv {...props}>{children}</MotionDiv>
+);
 
 interface User {
   id: string;
@@ -24,6 +46,8 @@ interface User {
   created_at: string;
   status?: string;
   role?: string;
+  is_admin?: boolean;
+  avatar_url?: string;
 }
 
 interface StatusCount {
@@ -69,8 +93,7 @@ export default function AdminPage() {
         // Buscar estatísticas
         const { data: totalUsers, error: totalError } = await supabase
           .from('profiles')
-          .select('id, is_approved')
-          .not('is_admin', 'eq', true);
+          .select('id, is_approved');
           
         if (totalError) throw totalError;
 
@@ -79,7 +102,6 @@ export default function AdminPage() {
           .from('profiles')
           .select('id, email, name, is_approved, created_at')
           .eq('is_approved', false)
-          .not('is_admin', 'eq', true)
           .order('created_at', { ascending: false });
           
         if (pendingError) throw pendingError;
@@ -87,9 +109,8 @@ export default function AdminPage() {
         // Buscar usuários aprovados
         const { data: approvedUsersData, error: approvedError } = await supabase
           .from('profiles')
-          .select('id, email, name, is_approved, created_at, status, role')
+          .select('id, email, name, is_approved, created_at, status, role, is_admin, avatar_url')
           .eq('is_approved', true)
-          .not('is_admin', 'eq', true)
           .order('created_at', { ascending: false });
           
         if (approvedError) throw approvedError;
@@ -335,6 +356,72 @@ export default function AdminPage() {
     }
   };
 
+  // Iniciar edição de usuário
+  const startEditUser = (userId: string) => {
+    const user = approvedUsers.find(u => u.id === userId);
+    if (user) {
+      setUserToApprove(userId);
+      setSelectedStatus(user.status || '');
+      setSelectedRole(user.role || 'Membro');
+    }
+  };
+
+  // Completar edição do usuário
+  const completeEdit = async () => {
+    if (!userToApprove || !selectedStatus || !selectedRole) {
+      setMessage({
+        type: 'error',
+        text: 'Selecione um status e uma função para o usuário.'
+      });
+      return;
+    }
+
+    try {
+      setProcessingUser(userToApprove);
+      setMessage(null);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          status: selectedStatus,
+          role: selectedRole
+        })
+        .eq('id', userToApprove);
+
+      if (error) throw error;
+
+      // Atualizar listas
+      const updatedUsers = approvedUsers.map(user => {
+        if (user.id === userToApprove) {
+          return { ...user, status: selectedStatus, role: selectedRole };
+        }
+        return user;
+      });
+      
+      setApprovedUsers(updatedUsers);
+      setFilteredUsers(updatedUsers);
+
+      setMessage({
+        type: 'success',
+        text: 'Usuário atualizado com sucesso!'
+      });
+
+      // Fechar modal
+      setUserToApprove(null);
+      setSelectedStatus('');
+      setSelectedRole('');
+    } catch (error: any) {
+      console.error('Erro ao atualizar usuário:', error);
+      setMessage({
+        type: 'error',
+        text: `Erro ao atualizar usuário: ${error.message}`
+      });
+    } finally {
+      setProcessingUser(null);
+      setTimeout(() => setMessage(null), 5000);
+    }
+  };
+
   // Formatar data
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -349,8 +436,16 @@ export default function AdminPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center min-h-[80vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+        <div className="container mx-auto">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md overflow-hidden mb-6">
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Administração</h1>
+              <p className="text-gray-600 mb-6">Carregando dados do sistema...</p>
+              <div className="flex justify-center">
+                <div className="w-12 h-12 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -358,74 +453,114 @@ export default function AdminPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-full mx-auto">
+      <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <Dashboard className="text-primary-600 text-3xl mr-3" />
-            <h1 className="text-2xl font-bold text-gray-800">Administração</h1>
+            <Dashboard className="text-blue-600 text-2xl mr-3" />
+            <h1 className="text-2xl font-bold text-gray-900">Administração</h1>
           </div>
         </div>
 
-        {message && (
-          <div className={`p-4 rounded-md mb-6 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {message.text}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md overflow-hidden mb-6">
+          <div className="p-6">
+            <p className="text-gray-600 mb-6">Gerencie os integrantes do sistema e monitore as estatísticas</p>
+            
+            {message && (
+              <MotionComponent 
+                className={`p-4 rounded-md mb-6 ${message.type === 'success' ? 'bg-green-50 border-l-4 border-green-500 text-green-700' : 'bg-red-50 border-l-4 border-red-500 text-red-700'}`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                {message.text}
+              </MotionComponent>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Cards de estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center">
-            <div className="rounded-full bg-blue-100 p-3 mr-4">
-              <Person className="text-blue-500 text-xl" />
+          <MotionComponent 
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-6 flex items-center">
+              <div className="rounded-full bg-blue-500 p-3 mr-4 text-white">
+                <Person />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-blue-800">Total de Integrantes</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Total de Integrantes</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
+          </MotionComponent>
           
-          <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow flex items-center">
-            <div className="rounded-full bg-yellow-100 p-3 mr-4">
-              <HourglassEmpty className="text-yellow-500 text-xl" />
+          <MotionComponent 
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <div className="bg-gradient-to-r from-yellow-100 to-yellow-50 p-6 flex items-center">
+              <div className="rounded-full bg-yellow-500 p-3 mr-4 text-white">
+                <HourglassEmpty />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-yellow-800">Pendentes</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Pendentes</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-            </div>
-          </div>
+          </MotionComponent>
           
-          <div className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-sm font-medium text-gray-500 mb-3">Integrantes por Status</p>
-            <div className="space-y-2 max-h-28 overflow-y-auto">
-              {statusCounts.length > 0 ? (
-                statusCounts.map((item) => (
-                  <div key={item.status} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-700">{item.status}</span>
-                    <span className="px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-medium">
-                      {item.count}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">Nenhum integrante aprovado</p>
-              )}
+          <MotionComponent 
+            className="bg-white rounded-xl shadow-md overflow-hidden"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <div className="bg-gradient-to-r from-indigo-100 to-indigo-50 p-4">
+              <div className="flex items-center mb-3">
+                <PieChart className="text-indigo-600 mr-2" />
+                <p className="text-sm font-medium text-indigo-900">Integrantes por Status</p>
+              </div>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {statusCounts.length > 0 ? (
+                  statusCounts.map((item) => (
+                    <div key={item.status} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-700">{item.status}</span>
+                      <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                        {item.count}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">Nenhum integrante aprovado</p>
+                )}
+              </div>
             </div>
-          </div>
+          </MotionComponent>
         </div>
 
         {/* Lista de Integrantes com Filtros */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+        <MotionComponent 
+          className="bg-white rounded-xl shadow-md overflow-hidden mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
           <div className="border-b border-gray-200">
             <div className="flex justify-between items-center px-6 py-4">
               <div className="flex">
                 <button
-                  className={`px-4 py-2 font-medium transition-colors ${activeTab === 'pending' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-4 py-2 font-medium transition-colors ${activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => { setActiveTab('pending'); resetFilters(); }}
                 >
                   Pendentes de Aprovação
                 </button>
                 <button
-                  className={`px-4 py-2 font-medium transition-colors ${activeTab === 'all' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  className={`px-4 py-2 font-medium transition-colors ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                   onClick={() => { setActiveTab('all'); resetFilters(); }}
                 >
                   Todos os Integrantes
@@ -435,7 +570,7 @@ export default function AdminPage() {
               {activeTab === 'all' && (
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center text-sm text-gray-600 hover:text-primary-600"
+                  className="flex items-center text-sm text-blue-600 hover:text-blue-800"
                 >
                   <FilterList className="mr-1" fontSize="small" />
                   {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
@@ -454,7 +589,7 @@ export default function AdminPage() {
                     <select
                       value={filters.status}
                       onChange={(e) => setFilters({...filters, status: e.target.value})}
-                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">Todos</option>
                       {statusOptions.map(option => (
@@ -471,7 +606,7 @@ export default function AdminPage() {
                     <select
                       value={filters.role}
                       onChange={(e) => setFilters({...filters, role: e.target.value})}
-                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">Todas</option>
                       {roleOptions.map(option => (
@@ -491,7 +626,7 @@ export default function AdminPage() {
                         value={filters.searchTerm}
                         onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
                         placeholder="Nome ou email"
-                        className="w-full p-2 pl-9 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-full p-2 pl-9 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <Search className="absolute left-2 top-2 text-gray-400" fontSize="small" />
                     </div>
@@ -500,7 +635,7 @@ export default function AdminPage() {
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={resetFilters}
-                    className="text-xs font-medium text-primary-600 hover:text-primary-800"
+                    className="text-xs font-medium text-blue-600 hover:text-blue-800"
                   >
                     Limpar Filtros
                   </button>
@@ -591,7 +726,7 @@ export default function AdminPage() {
                     {(filters.status || filters.role || filters.searchTerm) && (
                       <button
                         onClick={resetFilters}
-                        className="mt-2 text-primary-600 hover:underline"
+                        className="mt-2 text-blue-600 hover:underline"
                       >
                         Limpar filtros
                       </button>
@@ -626,13 +761,35 @@ export default function AdminPage() {
                         {filteredUsers.map(user => (
                           <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                              <div className="flex items-center">
+                                <div className="h-10 w-10 flex-shrink-0">
+                                  {user.avatar_url ? (
+                                    <img 
+                                      src={user.avatar_url} 
+                                      alt="" 
+                                      className="h-10 w-10 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                      <Person className="text-gray-500" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                  {user.is_admin && (
+                                    <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                                      Admin
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">{user.email}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                 {user.status || 'Aprovado'}
                               </span>
                             </td>
@@ -645,8 +802,16 @@ export default function AdminPage() {
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex space-x-2 justify-end">
                                 <button
-                                  onClick={() => rejectUser(user.id)}
+                                  onClick={() => startEditUser(user.id)}
                                   disabled={processingUser === user.id}
+                                  className="text-blue-600 hover:text-blue-800 disabled:opacity-50 p-1 rounded-full hover:bg-blue-50 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit />
+                                </button>
+                                <button
+                                  onClick={() => rejectUser(user.id)}
+                                  disabled={processingUser === user.id || user.is_admin}
                                   className="text-red-600 hover:text-red-800 disabled:opacity-50 p-1 rounded-full hover:bg-red-50 transition-colors"
                                   title="Remover acesso"
                                 >
@@ -663,40 +828,72 @@ export default function AdminPage() {
               </>
             )}
           </div>
-        </div>
+        </MotionComponent>
 
-        {/* Modal de seleção de status para aprovação */}
+        {/* Modal de seleção de status para aprovação/edição */}
         {userToApprove && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Aprovar Usuário</h3>
+            <MotionComponent 
+              className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full relative"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 -m-6 mb-6 px-6 py-4 rounded-t-xl flex justify-between items-center">
+                <h3 className="text-lg font-medium text-white">
+                  {approvedUsers.find(u => u.id === userToApprove)?.is_approved 
+                    ? 'Editar Usuário' 
+                    : 'Aprovar Usuário'
+                  }
+                </h3>
                 <button 
                   onClick={cancelApprovalProcess}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-white hover:text-gray-200 transition-colors"
                 >
                   <Close />
                 </button>
               </div>
               
-              <p className="mb-4 text-sm text-gray-600">
-                Selecione o status inicial do usuário:
-              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status:
+                  </label>
+                  <select 
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">Selecione um status...</option>
+                    {statusOptions.map(option => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Função:
+                  </label>
+                  <select 
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">Selecione uma função...</option>
+                    {roleOptions.map(option => (
+                      <option key={option.id} value={option.name}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               
-              <select 
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md mb-4 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
-              >
-                <option value="">Selecione um status...</option>
-                {statusOptions.map(option => (
-                  <option key={option.id} value={option.name}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
-              
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 mt-6">
                 <button
                   onClick={cancelApprovalProcess}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-700 transition-colors"
@@ -704,9 +901,12 @@ export default function AdminPage() {
                   Cancelar
                 </button>
                 <button
-                  onClick={completeApproval}
-                  disabled={!selectedStatus || processingUser === userToApprove}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-md text-white transition-colors disabled:bg-primary-400"
+                  onClick={approvedUsers.find(u => u.id === userToApprove)?.is_approved 
+                    ? completeEdit 
+                    : completeApproval
+                  }
+                  disabled={!selectedStatus || !selectedRole || processingUser === userToApprove}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white transition-colors disabled:bg-blue-400"
                 >
                   {processingUser === userToApprove ? (
                     <div className="flex items-center">
@@ -714,11 +914,13 @@ export default function AdminPage() {
                       Processando...
                     </div>
                   ) : (
-                    'Aprovar Usuário'
+                    approvedUsers.find(u => u.id === userToApprove)?.is_approved 
+                      ? 'Salvar Alterações'
+                      : 'Aprovar Usuário'
                   )}
                 </button>
               </div>
-            </div>
+            </MotionComponent>
           </div>
         )}
       </div>
