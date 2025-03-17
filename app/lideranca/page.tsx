@@ -29,6 +29,11 @@ interface EstatisticasType {
   total: number;
   porFuncao: { [key: string]: number };
   porStatus: { [key: string]: number };
+  doadores: {
+    naoDoadores: number;
+    doadores: number;
+    podemDoar: number;
+  };
 }
 
 export default function LiderancaPage() {
@@ -37,7 +42,12 @@ export default function LiderancaPage() {
   const [estatisticas, setEstatisticas] = useState<EstatisticasType>({
     total: 0,
     porFuncao: {},
-    porStatus: {}
+    porStatus: {},
+    doadores: {
+      naoDoadores: 0,
+      doadores: 0,
+      podemDoar: 0
+    }
   });
   const [filtros, setFiltros] = useState({
     busca: '',
@@ -78,6 +88,11 @@ export default function LiderancaPage() {
         const total = data.length;
         const porFuncao: { [key: string]: number } = {};
         const porStatus: { [key: string]: number } = {};
+        const doadores = {
+          naoDoadores: 0,
+          doadores: 0,
+          podemDoar: 0
+        };
 
         data.forEach((integrante) => {
           // Contagem por função
@@ -89,12 +104,23 @@ export default function LiderancaPage() {
           if (integrante.status) {
             porStatus[integrante.status] = (porStatus[integrante.status] || 0) + 1;
           }
+
+          // Contagem de doadores
+          if (integrante.is_blood_donor) {
+            doadores.doadores++;
+            if (!integrante.last_blood_donation || podeDoarSangue(integrante.last_blood_donation)) {
+              doadores.podemDoar++;
+            }
+          } else {
+            doadores.naoDoadores++;
+          }
         });
 
         setEstatisticas({
           total,
           porFuncao,
-          porStatus
+          porStatus,
+          doadores
         });
 
         setIntegrantes(data);
@@ -159,7 +185,7 @@ export default function LiderancaPage() {
     <AppLayout>
       <div className="container mx-auto px-4 py-8">
         {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {/* Total de Integrantes */}
           <motion.div 
             className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
@@ -174,12 +200,51 @@ export default function LiderancaPage() {
             <h3 className="text-3xl font-bold text-gray-900">{estatisticas.total}</h3>
           </motion.div>
 
-          {/* Funções */}
+          {/* Doadores */}
           <motion.div 
             className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="flex items-center text-gray-600 mb-4">
+              <svg 
+                className="w-6 h-6 text-red-600 mr-2" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" 
+                />
+              </svg>
+              <span className="text-sm font-medium">Doadores de Sangue</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Não Doadores</span>
+                <span className="text-lg font-semibold text-gray-600">{estatisticas.doadores.naoDoadores}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Doadores*</span>
+                <span className="text-lg font-semibold text-red-600">{estatisticas.doadores.doadores}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium text-xs">*Podem Doar</span>
+                <span className="text-sm font-semibold text-green-600">{estatisticas.doadores.podemDoar}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Funções */}
+          <motion.div 
+            className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="flex items-center text-gray-600 mb-4">
               <SupervisorAccount className="text-primary-600 mr-2" />
@@ -200,7 +265,7 @@ export default function LiderancaPage() {
             className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
           >
             <div className="flex items-center text-gray-600 mb-4">
               <Person className="text-primary-600 mr-2" />
@@ -222,67 +287,80 @@ export default function LiderancaPage() {
           className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-gray-100"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
         >
           <div className="flex flex-col space-y-4">
             {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
               <input
                 type="text"
                 placeholder="Buscar por nome, apelido ou email..."
                 value={filtros.busca}
                 onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
               />
             </div>
 
-            {/* Selects e Checkboxes */}
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex flex-col md:flex-row gap-4 flex-1">
-                <select
-                  value={filtros.funcao}
-                  onChange={(e) => setFiltros({ ...filtros, funcao: e.target.value })}
-                  className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white"
-                >
-                  <option value="">Todas as funções</option>
-                  {Object.keys(estatisticas.porFuncao).map((funcao) => (
-                    <option key={funcao} value={funcao}>{funcao}</option>
-                  ))}
-                </select>
+            {/* Filtros */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Selects */}
+              <div className="flex flex-wrap items-center gap-3 min-w-[200px]">
+                <div className="relative">
+                  <select
+                    value={filtros.funcao}
+                    onChange={(e) => setFiltros({ ...filtros, funcao: e.target.value })}
+                    className="appearance-none w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white text-sm text-gray-700 font-medium hover:border-primary-300"
+                  >
+                    <option value="">Todas as funções</option>
+                    {Object.keys(estatisticas.porFuncao).map((funcao) => (
+                      <option key={funcao} value={funcao}>{funcao}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <FilterList className="h-5 w-5" />
+                  </div>
+                </div>
 
-                <select
-                  value={filtros.status}
-                  onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
-                  className="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white"
-                >
-                  <option value="">Todos os status</option>
-                  {Object.keys(estatisticas.porStatus).map((status) => (
-                    <option key={status} value={status}>{status}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={filtros.status}
+                    onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
+                    className="appearance-none w-full pl-4 pr-10 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 bg-white text-sm text-gray-700 font-medium hover:border-primary-300"
+                  >
+                    <option value="">Todos os status</option>
+                    {Object.keys(estatisticas.porStatus).map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                    <FilterList className="h-5 w-5" />
+                  </div>
+                </div>
               </div>
 
-              {/* Filtros de Doação */}
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <label className="flex items-center space-x-2 whitespace-nowrap">
+              {/* Checkboxes */}
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="inline-flex items-center px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={filtros.apenasDoadores}
                     onChange={(e) => setFiltros({ ...filtros, apenasDoadores: e.target.checked })}
-                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 focus:ring-offset-0"
                   />
-                  <span className="text-sm text-gray-700">Apenas Doadores</span>
+                  <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">Apenas Doadores</span>
                 </label>
 
-                <label className="flex items-center space-x-2 whitespace-nowrap">
+                <label className="inline-flex items-center px-4 py-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer group">
                   <input
                     type="checkbox"
                     checked={filtros.apenasDisponiveis}
                     onChange={(e) => setFiltros({ ...filtros, apenasDisponiveis: e.target.checked })}
-                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 focus:ring-offset-0"
                   />
-                  <span className="text-sm text-gray-700">Disponíveis para Doar</span>
+                  <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">Disponíveis para Doar</span>
                 </label>
 
                 {(filtros.busca || filtros.funcao || filtros.status || filtros.apenasDoadores || filtros.apenasDisponiveis) && (
@@ -294,9 +372,9 @@ export default function LiderancaPage() {
                       apenasDoadores: false, 
                       apenasDisponiveis: false 
                     })}
-                    className="px-4 py-3 text-gray-600 hover:text-gray-800 flex items-center justify-center rounded-xl hover:bg-gray-50 border border-gray-200 transition-all duration-200"
+                    className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all duration-200 hover:text-gray-900"
                   >
-                    <Clear className="mr-2" />
+                    <Clear className="w-4 h-4 mr-2" />
                     Limpar Filtros
                   </button>
                 )}
@@ -310,7 +388,7 @@ export default function LiderancaPage() {
           className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
         >
           <div className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Lista de Integrantes</h2>
