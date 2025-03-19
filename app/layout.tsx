@@ -1,7 +1,5 @@
 import { Geist } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import HeaderAuth from "@/components/header-auth";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import AuthManager from "@/components/auth/AuthManager";
 import "./globals.css";
@@ -27,28 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={geistSans.className} suppressHydrationWarning>
+    <html lang="pt-BR" className={geistSans.className}>
       <body className="bg-white text-gray-900 antialiased h-screen">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthManager>
-            <div className="h-full flex flex-col">
-              <nav className="w-full border-b border-b-foreground/10 h-16">
-                <div className="w-full flex justify-end items-center h-full p-3 px-5">
-                  {!hasEnvVars ? null : <HeaderAuth />}
-                </div>
-              </nav>
-
-              <div className="flex-1">
-                {children}
+        <AuthManager>
+          <div className="h-full flex flex-col">
+            <nav className="w-full border-b border-b-foreground/10 h-16">
+              <div className="w-full flex justify-end items-center h-full p-3 px-5">
+                {!hasEnvVars ? null : <HeaderAuth />}
               </div>
+            </nav>
+
+            <div className="flex-1">
+              {children}
             </div>
-          </AuthManager>
-        </ThemeProvider>
+          </div>
+        </AuthManager>
       </body>
     </html>
   );

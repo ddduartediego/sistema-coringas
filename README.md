@@ -1,6 +1,6 @@
 # Sistema Coringas
 
-Sistema de gestão de integrantes da Equipe Coringas com interface moderna e limpa.
+Sistema de gestão de integrantes da Equipe Coringas com interface moderna e limpa em tema claro.
 
 ## Funcionalidades
 
