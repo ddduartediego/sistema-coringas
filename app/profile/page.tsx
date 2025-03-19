@@ -21,7 +21,11 @@ import {
   Check,
   Warning,
   CalendarMonth,
-  Bloodtype
+  Bloodtype,
+  AssignmentInd,
+  LocationCity,
+  Group,
+  People
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import CobrancasIntegrante from './components/CobrancasIntegrante';
@@ -66,6 +70,47 @@ const formatPhone = (value: string) => {
     .replace(/(-\d{4})\d+?$/, '$1');
 };
 
+// Máscara RG
+const formatRG = (value: string) => {
+  if (!value) return '';
+  
+  // Remove todos os caracteres não alfanuméricos
+  const cleanValue = value.replace(/[^\w]/g, '');
+  
+  // Para RGs mais curtos (7-8 dígitos)
+  if (cleanValue.length <= 8) {
+    if (cleanValue.length === 8) {
+      // Formato "0.000.000-0"
+      return cleanValue
+        .replace(/^(\d)(\d{3})(\d{3})(\d{1})$/, '$1.$2.$3-$4');
+    } else if (cleanValue.length === 7) {
+      // Formato "000.000-0"
+      return cleanValue
+        .replace(/^(\d{3})(\d{3})(\d{1})$/, '$1.$2-$3');
+    }
+    return cleanValue;
+  }
+  // Para RGs com 9 dígitos (padrão mais comum): 00.000.000-0
+  else if (cleanValue.length === 9) {
+    return cleanValue
+      .replace(/^(\d{2})(\d{3})(\d{3})(\d{1})$/, '$1.$2.$3-$4');
+  } 
+  // Para RGs com UF no final: 00.000.000-0/UF
+  else if (cleanValue.length > 9 && cleanValue.length <= 11) {
+    const rgPart = cleanValue.slice(0, 9);
+    const ufPart = cleanValue.slice(9);
+    
+    return rgPart
+      .replace(/^(\d{2})(\d{3})(\d{3})(\d{1})$/, '$1.$2.$3-$4') + 
+      (ufPart ? '/' + ufPart : '');
+  }
+  // Formato para 8 dígitos: 00000000-0
+  else {
+    return cleanValue
+      .replace(/(\w{8})(\w{1})/, '$1-$2');
+  }
+};
+
 // Schema de validação
 const profileSchema = z.object({
   nickname: z.string().min(1, 'Apelido é obrigatório'),
@@ -81,6 +126,10 @@ const profileSchema = z.object({
   profession: z.string().optional().nullable(),
   is_blood_donor: z.boolean().optional().nullable(),
   last_blood_donation: z.string().optional().nullable(),
+  rg: z.string().optional().nullable(),
+  naturalidade: z.string().optional().nullable(),
+  nome_mae: z.string().optional().nullable(),
+  nome_pai: z.string().optional().nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -125,6 +174,10 @@ export default function ProfilePage() {
       profession: null,
       is_blood_donor: null,
       last_blood_donation: null,
+      rg: null,
+      naturalidade: null,
+      nome_mae: null,
+      nome_pai: null,
     }
   });
 
@@ -142,6 +195,10 @@ export default function ProfilePage() {
       { name: 'profession', label: 'Profissão' },
       { name: 'is_blood_donor', label: 'Doador de Sangue' },
       { name: 'last_blood_donation', label: 'Última Doação' },
+      { name: 'rg', label: 'RG' },
+      { name: 'naturalidade', label: 'Naturalidade' },
+      { name: 'nome_mae', label: 'Nome da Mãe' },
+      { name: 'nome_pai', label: 'Nome do Pai' },
     ];
 
     const incomplete = requiredFields.filter(field => {
@@ -205,6 +262,10 @@ export default function ProfilePage() {
           setValue('profession', profile.profession || null);
           setValue('is_blood_donor', profile.is_blood_donor || null);
           setValue('last_blood_donation', profile.last_blood_donation || null);
+          setValue('rg', profile.rg || null);
+          setValue('naturalidade', profile.naturalidade || null);
+          setValue('nome_mae', profile.nome_mae || null);
+          setValue('nome_pai', profile.nome_pai || null);
         }
 
         // Buscar opções de status
@@ -252,6 +313,10 @@ export default function ProfilePage() {
           profession: data.profession,
           is_blood_donor: data.is_blood_donor,
           last_blood_donation: data.last_blood_donation,
+          rg: data.rg,
+          naturalidade: data.naturalidade,
+          nome_mae: data.nome_mae,
+          nome_pai: data.nome_pai,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profileData.id);
@@ -301,6 +366,10 @@ export default function ProfilePage() {
         profession: profileData.profession || null,
         is_blood_donor: profileData.is_blood_donor || null,
         last_blood_donation: profileData.last_blood_donation || null,
+        rg: profileData.rg || null,
+        naturalidade: profileData.naturalidade || null,
+        nome_mae: profileData.nome_mae || null,
+        nome_pai: profileData.nome_pai || null,
       });
     }
     setIsEditing(false);
@@ -560,6 +629,68 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
+                {/* Doador de Sangue */}
+                <div className="flex items-start">
+                  <Bloodtype className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Doador de Sangue</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="is_blood_donor"
+                          control={control}
+                          render={({ field: { value, onChange, ...field } }) => (
+                            <input
+                              {...field}
+                              type="checkbox"
+                              checked={value || false}
+                              onChange={(e) => onChange(e.target.checked)}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.is_blood_donor ? 'Sim' : 'Não'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Última Doação - Só exibe se for doador */}
+                {(isEditing ? watch('is_blood_donor') : profileData?.is_blood_donor) && (
+                  <div className="flex items-start">
+                    <CalendarMonth className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Última Doação</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="last_blood_donation"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="date"
+                                value={field.value || ''}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">
+                          {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
+                        </p>
+                      )}
+                      {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
+                        <p className="text-sm text-green-600 mt-1">
+                          Você já pode fazer uma nova doação de sangue! 🩸
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Tamanho Camiseta */}
                 <div className="flex items-start">
                   <div className="text-gray-400 mt-1 mr-3">
@@ -628,20 +759,48 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Data de Nascimento */}
+                {/* RG */}
                 <div className="flex items-start">
-                  <Cake className="text-gray-400 mt-1 mr-3" />
+                  <AssignmentInd className="text-gray-400 mt-1 mr-3" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">Data de Nascimento</p>
+                    <p className="text-sm text-gray-500">RG</p>
                     {isEditing ? (
                       <div>
                         <Controller
-                          name="birth_date"
+                          name="rg"
                           control={control}
                           render={({ field }) => (
                             <input
                               {...field}
-                              type="date"
+                              type="text"
+                              maxLength={14}
+                              value={field.value ? formatRG(field.value) : ''}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.rg ? formatRG(profileData.rg) : '-'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Nome da Mãe */}
+                <div className="flex items-start">
+                  <People className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Nome da Mãe</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="nome_mae"
+                          control={control}
+                          render={({ field }) => (
+                            <input
+                              {...field}
+                              type="text"
                               value={field.value || ''}
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                             />
@@ -649,9 +808,33 @@ export default function ProfilePage() {
                         />
                       </div>
                     ) : (
-                      <p className="font-medium">
-                        {profileData?.birth_date ? new Date(profileData.birth_date).toLocaleDateString('pt-BR') : '-'}
-                      </p>
+                      <p className="font-medium">{profileData?.nome_mae || '-'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Nome do Pai */}
+                <div className="flex items-start">
+                  <People className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Nome do Pai</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="nome_pai"
+                          control={control}
+                          render={({ field }) => (
+                            <input
+                              {...field}
+                              type="text"
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.nome_pai || '-'}</p>
                     )}
                   </div>
                 </div>
@@ -710,67 +893,59 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Doador de Sangue */}
+                {/* Data de Nascimento */}
                 <div className="flex items-start">
-                  <Bloodtype className="text-gray-400 mt-1 mr-3" />
+                  <Cake className="text-gray-400 mt-1 mr-3" />
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">Doador de Sangue</p>
+                    <p className="text-sm text-gray-500">Data de Nascimento</p>
                     {isEditing ? (
                       <div>
                         <Controller
-                          name="is_blood_donor"
+                          name="birth_date"
                           control={control}
-                          render={({ field: { value, onChange, ...field } }) => (
+                          render={({ field }) => (
                             <input
                               {...field}
-                              type="checkbox"
-                              checked={value || false}
-                              onChange={(e) => onChange(e.target.checked)}
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                              type="date"
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                             />
                           )}
                         />
                       </div>
                     ) : (
-                      <p className="font-medium">{profileData?.is_blood_donor ? 'Sim' : 'Não'}</p>
+                      <p className="font-medium">
+                        {profileData?.birth_date ? new Date(profileData.birth_date).toLocaleDateString('pt-BR') : '-'}
+                      </p>
                     )}
                   </div>
                 </div>
 
-                {/* Última Doação - Só exibe se for doador */}
-                {(isEditing ? watch('is_blood_donor') : profileData?.is_blood_donor) && (
-                  <div className="flex items-start">
-                    <CalendarMonth className="text-gray-400 mt-1 mr-3" />
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500">Última Doação</p>
-                      {isEditing ? (
-                        <div>
-                          <Controller
-                            name="last_blood_donation"
-                            control={control}
-                            render={({ field }) => (
-                              <input
-                                {...field}
-                                type="date"
-                                value={field.value || ''}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                              />
-                            )}
-                          />
-                        </div>
-                      ) : (
-                        <p className="font-medium">
-                          {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
-                        </p>
-                      )}
-                      {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
-                        <p className="text-sm text-green-600 mt-1">
-                          Você já pode fazer uma nova doação de sangue! 🩸
-                        </p>
-                      )}
-                    </div>
+                {/* Naturalidade - Agora como último campo */}
+                <div className="flex items-start">
+                  <LocationCity className="text-gray-400 mt-1 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Naturalidade</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="naturalidade"
+                          control={control}
+                          render={({ field }) => (
+                            <input
+                              {...field}
+                              type="text"
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            />
+                          )}
+                        />
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.naturalidade || '-'}</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </motion.div>

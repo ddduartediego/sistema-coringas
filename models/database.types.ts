@@ -24,6 +24,10 @@ export interface Database {
           gender: string | null
           phone: string | null
           profession: string | null
+          rg: string | null
+          naturalidade: string | null
+          nome_mae: string | null
+          nome_pai: string | null
           is_admin: boolean
           is_approved: boolean
           created_at: string
@@ -43,6 +47,10 @@ export interface Database {
           gender?: string | null
           phone?: string | null
           profession?: string | null
+          rg?: string | null
+          naturalidade?: string | null
+          nome_mae?: string | null
+          nome_pai?: string | null
           is_admin?: boolean
           is_approved?: boolean
           created_at?: string
@@ -62,6 +70,10 @@ export interface Database {
           gender?: string | null
           phone?: string | null
           profession?: string | null
+          rg?: string | null
+          naturalidade?: string | null
+          nome_mae?: string | null
+          nome_pai?: string | null
           is_admin?: boolean
           is_approved?: boolean
           created_at?: string

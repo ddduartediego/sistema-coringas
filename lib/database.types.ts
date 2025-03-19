@@ -173,6 +173,10 @@ export interface Database {
           status: string | null;
           nickname: string | null;
           is_admin: boolean;
+          rg: string | null;
+          naturalidade: string | null;
+          nome_mae: string | null;
+          nome_pai: string | null;
           created_at: string;
           updated_at: string | null;
         };
@@ -185,6 +189,10 @@ export interface Database {
           status?: string | null;
           nickname?: string | null;
           is_admin?: boolean;
+          rg?: string | null;
+          naturalidade?: string | null;
+          nome_mae?: string | null;
+          nome_pai?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
@@ -197,6 +205,10 @@ export interface Database {
           status?: string | null;
           nickname?: string | null;
           is_admin?: boolean;
+          rg?: string | null;
+          naturalidade?: string | null;
+          nome_mae?: string | null;
+          nome_pai?: string | null;
           created_at?: string;
           updated_at?: string | null;
         };
