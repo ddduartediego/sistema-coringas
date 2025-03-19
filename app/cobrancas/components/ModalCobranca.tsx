@@ -728,7 +728,7 @@ export default function ModalCobranca({
                                   type="checkbox"
                                   className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                                   checked={cobranca.integrantesSelecionados.includes(integrante.id)}
-                                  onChange={() => {}} // Handled by parent div click
+                                  onChange={() => handleIntegranteSelecionado(integrante.id)}
                                   onClick={(e) => e.stopPropagation()}
                                 />
                               </div>
