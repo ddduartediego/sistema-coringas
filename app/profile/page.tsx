@@ -25,7 +25,13 @@ import {
   AssignmentInd,
   LocationCity,
   Group,
-  People
+  People,
+  Home,
+  LocationOn,
+  Apartment,
+  Map,
+  Place,
+  Numbers
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import CobrancasIntegrante from './components/CobrancasIntegrante';
@@ -111,6 +117,15 @@ const formatRG = (value: string) => {
   }
 };
 
+// Máscara CEP
+const formatCEP = (value: string) => {
+  if (!value) return '';
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{5})(\d)/, '$1-$2')
+    .replace(/(-\d{3})\d+?$/, '$1');
+};
+
 // Schema de validação
 const profileSchema = z.object({
   nickname: z.string().min(1, 'Apelido é obrigatório'),
@@ -130,6 +145,13 @@ const profileSchema = z.object({
   naturalidade: z.string().optional().nullable(),
   nome_mae: z.string().optional().nullable(),
   nome_pai: z.string().optional().nullable(),
+  cep: z.string().optional().nullable(),
+  estado: z.string().optional().nullable(),
+  localidade: z.string().optional().nullable(),
+  bairro: z.string().optional().nullable(),
+  logradouro: z.string().optional().nullable(),
+  numero: z.string().optional().nullable(),
+  complemento: z.string().optional().nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -143,6 +165,7 @@ export default function ProfilePage() {
   const [roleOptions, setRoleOptions] = useState<{id: string, name: string}[]>([]);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [incompleteFields, setIncompleteFields] = useState<string[]>([]);
+  const [showAddress, setShowAddress] = useState(false);
   const [userData, setUserData] = useState<{
     id: string;
     name: string;
@@ -178,8 +201,38 @@ export default function ProfilePage() {
       naturalidade: null,
       nome_mae: null,
       nome_pai: null,
+      cep: null,
+      estado: null,
+      localidade: null,
+      bairro: null,
+      logradouro: null,
+      numero: null,
+      complemento: null,
     }
   });
+
+  // Função para buscar dados do CEP
+  const handleCEPSearch = async (cep: string) => {
+    if (!cep || cep.length < 8) return;
+    
+    // Remover caracteres não numéricos
+    const cleanCEP = cep.replace(/\D/g, '');
+    if (cleanCEP.length !== 8) return;
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+      const data = await response.json();
+      
+      if (!data.erro) {
+        setValue('estado', data.uf);
+        setValue('localidade', data.localidade);
+        setValue('bairro', data.bairro);
+        setValue('logradouro', data.logradouro);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
 
   // Função para verificar campos incompletos
   const checkIncompleteFields = (profile: any) => {
@@ -199,6 +252,12 @@ export default function ProfilePage() {
       { name: 'naturalidade', label: 'Naturalidade' },
       { name: 'nome_mae', label: 'Nome da Mãe' },
       { name: 'nome_pai', label: 'Nome do Pai' },
+      { name: 'cep', label: 'CEP' },
+      { name: 'estado', label: 'Estado' },
+      { name: 'localidade', label: 'Cidade' },
+      { name: 'bairro', label: 'Bairro' },
+      { name: 'logradouro', label: 'Logradouro' },
+      { name: 'numero', label: 'Número' },
     ];
 
     const incomplete = requiredFields.filter(field => {
@@ -266,6 +325,13 @@ export default function ProfilePage() {
           setValue('naturalidade', profile.naturalidade || null);
           setValue('nome_mae', profile.nome_mae || null);
           setValue('nome_pai', profile.nome_pai || null);
+          setValue('cep', profile.cep || null);
+          setValue('estado', profile.estado || null);
+          setValue('localidade', profile.localidade || null);
+          setValue('bairro', profile.bairro || null);
+          setValue('logradouro', profile.logradouro || null);
+          setValue('numero', profile.numero || null);
+          setValue('complemento', profile.complemento || null);
         }
 
         // Buscar opções de status
@@ -317,6 +383,13 @@ export default function ProfilePage() {
           naturalidade: data.naturalidade,
           nome_mae: data.nome_mae,
           nome_pai: data.nome_pai,
+          cep: data.cep,
+          estado: data.estado,
+          localidade: data.localidade,
+          bairro: data.bairro,
+          logradouro: data.logradouro,
+          numero: data.numero,
+          complemento: data.complemento,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profileData.id);
@@ -370,6 +443,13 @@ export default function ProfilePage() {
         naturalidade: profileData.naturalidade || null,
         nome_mae: profileData.nome_mae || null,
         nome_pai: profileData.nome_pai || null,
+        cep: profileData.cep || null,
+        estado: profileData.estado || null,
+        localidade: profileData.localidade || null,
+        bairro: profileData.bairro || null,
+        logradouro: profileData.logradouro || null,
+        numero: profileData.numero || null,
+        complemento: profileData.complemento || null,
       });
     }
     setIsEditing(false);
@@ -550,49 +630,83 @@ export default function ProfilePage() {
 
               {/* Lista de informações com ícones */}
               <div className="space-y-4">
-                {/* Nome */}
-                <div className="flex items-start">
-                  <AccountCircle className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Nome</p>
-                    <p className="font-medium">{userData.name}</p>
+                {/* Nome e Apelido em layout de duas colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nome */}
+                  <div className="flex items-start">
+                    <AccountCircle className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Nome</p>
+                      <p className="font-medium">{userData.name}</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Email */}
-                <div className="flex items-start">
-                  <AccountCircle className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{userData.email}</p>
-                  </div>
-                </div>
-
-                {/* Apelido */}
-                <div className="flex items-start">
-                  <Badge className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Apelido</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="nickname"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              className={`w-full p-2 border ${errors.nickname ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none`}
-                            />
+                  {/* Apelido */}
+                  <div className="flex items-start">
+                    <Badge className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Apelido</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="nickname"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                className={`w-full p-2 border ${errors.nickname ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none`}
+                              />
+                            )}
+                          />
+                          {errors.nickname && (
+                            <p className="mt-1 text-sm text-red-500">{errors.nickname.message}</p>
                           )}
-                        />
-                        {errors.nickname && (
-                          <p className="mt-1 text-sm text-red-500">{errors.nickname.message}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.nickname || '-'}</p>
-                    )}
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.nickname || '-'}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email e Telefone em layout de duas colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Email */}
+                  <div className="flex items-start">
+                    <AccountCircle className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium">{userData.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Telefone */}
+                  <div className="flex items-start">
+                    <Phone className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Telefone</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="phone"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                maxLength={15}
+                                value={field.value ? formatPhone(field.value) : ''}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.phone ? formatPhone(profileData.phone) : '-'}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -629,67 +743,70 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Doador de Sangue */}
-                <div className="flex items-start">
-                  <Bloodtype className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Doador de Sangue</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="is_blood_donor"
-                          control={control}
-                          render={({ field: { value, onChange, ...field } }) => (
-                            <input
-                              {...field}
-                              type="checkbox"
-                              checked={value || false}
-                              onChange={(e) => onChange(e.target.checked)}
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.is_blood_donor ? 'Sim' : 'Não'}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Última Doação - Só exibe se for doador */}
-                {(isEditing ? watch('is_blood_donor') : profileData?.is_blood_donor) && (
+                {/* Doador de Sangue e Última Doação em duas colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Doador de Sangue */}
                   <div className="flex items-start">
-                    <CalendarMonth className="text-gray-400 mt-1 mr-3" />
+                    <Bloodtype className="text-gray-400 mt-1 mr-3" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-500">Última Doação</p>
+                      <p className="text-sm text-gray-500">Doador de Sangue</p>
                       {isEditing ? (
                         <div>
                           <Controller
-                            name="last_blood_donation"
+                            name="is_blood_donor"
                             control={control}
-                            render={({ field }) => (
+                            render={({ field: { value, onChange, ...field } }) => (
                               <input
                                 {...field}
-                                type="date"
-                                value={field.value || ''}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                type="checkbox"
+                                checked={value || false}
+                                onChange={(e) => onChange(e.target.checked)}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
                               />
                             )}
                           />
                         </div>
                       ) : (
-                        <p className="font-medium">
-                          {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
-                        </p>
-                      )}
-                      {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
-                        <p className="text-sm text-green-600 mt-1">
-                          Você já pode fazer uma nova doação de sangue! 🩸
-                        </p>
+                        <p className="font-medium">{profileData?.is_blood_donor ? 'Sim' : 'Não'}</p>
                       )}
                     </div>
                   </div>
-                )}
+
+                  {/* Última Doação - Só exibe se for doador */}
+                  {(isEditing ? watch('is_blood_donor') : profileData?.is_blood_donor) && (
+                    <div className="flex items-start">
+                      <CalendarMonth className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Última Doação</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="last_blood_donation"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="date"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">
+                            {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
+                          </p>
+                        )}
+                        {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
+                          <p className="text-sm text-green-600 mt-1">
+                            🩸Você já pode fazer uma nova doação!
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Tamanho Camiseta */}
                 <div className="flex items-start">
@@ -731,139 +848,117 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* CPF */}
-                <div className="flex items-start">
-                  <Badge className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">CPF</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="cpf"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              maxLength={14}
-                              value={field.value ? formatCPF(field.value) : ''}
-                              onChange={(e) => field.onChange(e.target.value)}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.cpf ? formatCPF(profileData.cpf) : '-'}</p>
-                    )}
+                {/* CPF e RG em duas colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* CPF */}
+                  <div className="flex items-start">
+                    <Badge className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">CPF</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="cpf"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                maxLength={14}
+                                value={field.value ? formatCPF(field.value) : ''}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.cpf ? formatCPF(profileData.cpf) : '-'}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RG */}
+                  <div className="flex items-start">
+                    <AssignmentInd className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">RG</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="rg"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                maxLength={14}
+                                value={field.value ? formatRG(field.value) : ''}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.rg ? formatRG(profileData.rg) : '-'}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* RG */}
-                <div className="flex items-start">
-                  <AssignmentInd className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">RG</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="rg"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              maxLength={14}
-                              value={field.value ? formatRG(field.value) : ''}
-                              onChange={(e) => field.onChange(e.target.value)}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.rg ? formatRG(profileData.rg) : '-'}</p>
-                    )}
+                {/* Nome da Mãe e Nome do Pai em duas colunas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Nome da Mãe */}
+                  <div className="flex items-start">
+                    <People className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Nome da Mãe</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="nome_mae"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                value={field.value || ''}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.nome_mae || '-'}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Nome da Mãe */}
-                <div className="flex items-start">
-                  <People className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Nome da Mãe</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="nome_mae"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              value={field.value || ''}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.nome_mae || '-'}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Nome do Pai */}
-                <div className="flex items-start">
-                  <People className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Nome do Pai</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="nome_pai"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              value={field.value || ''}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.nome_pai || '-'}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Telefone */}
-                <div className="flex items-start">
-                  <Phone className="text-gray-400 mt-1 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">Telefone</p>
-                    {isEditing ? (
-                      <div>
-                        <Controller
-                          name="phone"
-                          control={control}
-                          render={({ field }) => (
-                            <input
-                              {...field}
-                              type="text"
-                              maxLength={15}
-                              value={field.value ? formatPhone(field.value) : ''}
-                              onChange={(e) => field.onChange(e.target.value)}
-                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                            />
-                          )}
-                        />
-                      </div>
-                    ) : (
-                      <p className="font-medium">{profileData?.phone ? formatPhone(profileData.phone) : '-'}</p>
-                    )}
+                  {/* Nome do Pai */}
+                  <div className="flex items-start">
+                    <People className="text-gray-400 mt-1 mr-3" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">Nome do Pai</p>
+                      {isEditing ? (
+                        <div>
+                          <Controller
+                            name="nome_pai"
+                            control={control}
+                            render={({ field }) => (
+                              <input
+                                {...field}
+                                type="text"
+                                value={field.value || ''}
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              />
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-medium">{profileData?.nome_pai || '-'}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -921,7 +1016,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Naturalidade - Agora como último campo */}
+                {/* Naturalidade */}
                 <div className="flex items-start">
                   <LocationCity className="text-gray-400 mt-1 mr-3" />
                   <div className="flex-1">
@@ -946,6 +1041,256 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </div>
+
+                {/* Título da seção de endereço com botão de collapse */}
+                <div className="border-t pt-4 mt-4">
+                  <button 
+                    onClick={() => setShowAddress(!showAddress)}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <h3 className="text-md font-semibold text-gray-700">Endereço</h3>
+                    <div className="text-blue-600">
+                      {showAddress ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                </div>
+
+                {/* Campos de endereço - exibidos apenas quando expandidos */}
+                {showAddress && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4 mt-4"
+                  >
+                    {/* CEP */}
+                    <div className="flex items-start">
+                      <LocationOn className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">CEP</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="cep"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  maxLength={9}
+                                  value={field.value ? formatCEP(field.value) : ''}
+                                  onChange={(e) => {
+                                    field.onChange(e.target.value);
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val.length === 8) {
+                                      handleCEPSearch(val);
+                                    }
+                                  }}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.cep ? formatCEP(profileData.cep) : '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Estado */}
+                    <div className="flex items-start">
+                      <Map className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Estado</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="estado"
+                              control={control}
+                              render={({ field }) => (
+                                <select
+                                  {...field}
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                >
+                                  <option value="">Selecione o estado</option>
+                                  <option value="AC">Acre</option>
+                                  <option value="AL">Alagoas</option>
+                                  <option value="AP">Amapá</option>
+                                  <option value="AM">Amazonas</option>
+                                  <option value="BA">Bahia</option>
+                                  <option value="CE">Ceará</option>
+                                  <option value="DF">Distrito Federal</option>
+                                  <option value="ES">Espírito Santo</option>
+                                  <option value="GO">Goiás</option>
+                                  <option value="MA">Maranhão</option>
+                                  <option value="MT">Mato Grosso</option>
+                                  <option value="MS">Mato Grosso do Sul</option>
+                                  <option value="MG">Minas Gerais</option>
+                                  <option value="PA">Pará</option>
+                                  <option value="PB">Paraíba</option>
+                                  <option value="PR">Paraná</option>
+                                  <option value="PE">Pernambuco</option>
+                                  <option value="PI">Piauí</option>
+                                  <option value="RJ">Rio de Janeiro</option>
+                                  <option value="RN">Rio Grande do Norte</option>
+                                  <option value="RS">Rio Grande do Sul</option>
+                                  <option value="RO">Rondônia</option>
+                                  <option value="RR">Roraima</option>
+                                  <option value="SC">Santa Catarina</option>
+                                  <option value="SP">São Paulo</option>
+                                  <option value="SE">Sergipe</option>
+                                  <option value="TO">Tocantins</option>
+                                </select>
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.estado || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Localidade (Cidade) */}
+                    <div className="flex items-start">
+                      <LocationCity className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Cidade</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="localidade"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.localidade || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bairro */}
+                    <div className="flex items-start">
+                      <Place className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Bairro</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="bairro"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.bairro || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Logradouro */}
+                    <div className="flex items-start">
+                      <Home className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Logradouro</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="logradouro"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.logradouro || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Número */}
+                    <div className="flex items-start">
+                      <Numbers className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Número</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="numero"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.numero || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Complemento */}
+                    <div className="flex items-start">
+                      <Apartment className="text-gray-400 mt-1 mr-3" />
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500">Complemento</p>
+                        {isEditing ? (
+                          <div>
+                            <Controller
+                              name="complemento"
+                              control={control}
+                              render={({ field }) => (
+                                <input
+                                  {...field}
+                                  type="text"
+                                  value={field.value || ''}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                                />
+                              )}
+                            />
+                          </div>
+                        ) : (
+                          <p className="font-medium">{profileData?.complemento || '-'}</p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </div>
           </motion.div>
