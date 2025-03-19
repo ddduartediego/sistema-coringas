@@ -185,8 +185,8 @@ export default function LiderancaPage() {
     <AppLayout>
       <div className="px-4 pb-8">
         {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {/* Total de Integrantes */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Total de Integrantes (com Status) */}
           <motion.div 
             className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
             initial={{ opacity: 0, y: 20 }}
@@ -197,7 +197,23 @@ export default function LiderancaPage() {
               <People className="text-primary-600 mr-2" />
               <span className="text-sm font-medium">Total de Integrantes</span>
             </div>
-            <h3 className="text-3xl font-bold text-gray-900">{estatisticas.total}</h3>
+            <h3 className="text-3xl font-bold text-gray-900 mb-3">{estatisticas.total}</h3>
+            
+            {/* Status integrado */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center text-gray-600 mb-3">
+                <Person className="text-primary-600 mr-2 text-sm" />
+                <span className="text-sm font-medium">Status</span>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(estatisticas.porStatus).map(([status, total]) => (
+                  <div key={status} className="flex justify-between items-center">
+                    <span className="text-gray-700 text-sm">{status}</span>
+                    <span className="text-sm font-semibold text-primary-600">{total}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
 
           {/* Doadores */}
@@ -254,27 +270,6 @@ export default function LiderancaPage() {
               {Object.entries(estatisticas.porFuncao).map(([funcao, total]) => (
                 <div key={funcao} className="flex justify-between items-center">
                   <span className="text-gray-700 font-medium">{funcao}</span>
-                  <span className="text-lg font-semibold text-primary-600">{total}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Status */}
-          <motion.div 
-            className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div className="flex items-center text-gray-600 mb-4">
-              <Person className="text-primary-600 mr-2" />
-              <span className="text-sm font-medium">Status</span>
-            </div>
-            <div className="space-y-3">
-              {Object.entries(estatisticas.porStatus).map(([status, total]) => (
-                <div key={status} className="flex justify-between items-center">
-                  <span className="text-gray-700 font-medium">{status}</span>
                   <span className="text-lg font-semibold text-primary-600">{total}</span>
                 </div>
               ))}
