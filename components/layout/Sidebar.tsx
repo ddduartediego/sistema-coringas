@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   Person, 
@@ -99,11 +100,27 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
           )}
 
           {/* Logo */}
-          <div className={`p-6 border-b border-gray-100 flex ${isCollapsed ? 'justify-center' : ''}`}>
+          <div className={`p-2 border-b border-gray-100 flex ${isCollapsed ? 'justify-center items-center' : 'justify-center items-center'}`}>
             {isCollapsed ? (
-              <span className="font-bold text-primary-600 text-2xl">C</span>
+              <div className="relative h-20 w-20">
+                <Image 
+                  src="/76.png" 
+                  alt="Logo Coringas" 
+                  fill
+                  style={{objectFit: 'contain'}}
+                  priority
+                />
+              </div>
             ) : (
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-blue-500 bg-clip-text text-transparent">Sistema Coringas</h1>
+              <div className="relative h-20 w-full">
+                <Image 
+                  src="/75.png" 
+                  alt="Sistema Coringas" 
+                  fill
+                  style={{objectFit: 'contain', objectPosition: 'center'}}
+                  priority
+                />
+              </div>
             )}
           </div>
 
