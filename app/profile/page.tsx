@@ -460,10 +460,13 @@ export default function ProfilePage() {
     if (!lastDonationDate) return true;
     
     const lastDonation = new Date(lastDonationDate);
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const waitingDate = new Date();
     
-    return lastDonation <= threeMonthsAgo;
+    // 2 meses para homens, 3 meses para outros gêneros
+    const waitingMonths = profileData?.gender === 'Masculino' ? 2 : 3;
+    waitingDate.setMonth(waitingDate.getMonth() - waitingMonths);
+    
+    return lastDonation <= waitingDate;
   };
 
   if (loading) {

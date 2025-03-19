@@ -23,6 +23,7 @@ interface IntegranteType {
   nickname: string;
   is_blood_donor: boolean;
   last_blood_donation: string | null;
+  gender: string | null;
 }
 
 interface EstatisticasType {
@@ -63,14 +64,24 @@ export default function LiderancaPage() {
   );
 
   // Função para verificar se pode doar sangue
-  const podeDoarSangue = (lastDonationDate: string | null) => {
+  const podeDoarSangue = (lastDonationDate: string | null, gender: string | null) => {
     if (!lastDonationDate) return true;
     
     const lastDonation = new Date(lastDonationDate);
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const currentDate = new Date();
     
-    return lastDonation <= threeMonthsAgo;
+    // Regra diferente baseada no gênero
+    if (gender === 'Masculino') {
+      // 2 meses para homens
+      const twoMonthsAgo = new Date();
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+      return lastDonation <= twoMonthsAgo;
+    } else {
+      // 3 meses para mulheres e outros gêneros
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      return lastDonation <= threeMonthsAgo;
+    }
   };
 
   // Buscar dados dos integrantes
@@ -108,7 +119,7 @@ export default function LiderancaPage() {
           // Contagem de doadores
           if (integrante.is_blood_donor) {
             doadores.doadores++;
-            if (podeDoarSangue(integrante.last_blood_donation)) {
+            if (podeDoarSangue(integrante.last_blood_donation, integrante.gender)) {
               doadores.podemDoar++;
             }
           } else {
@@ -145,7 +156,7 @@ export default function LiderancaPage() {
     
     const matchDoador = !filtros.apenasDoadores || integrante.is_blood_donor;
     const matchDisponivel = !filtros.apenasDisponiveis || 
-                          (integrante.is_blood_donor && podeDoarSangue(integrante.last_blood_donation));
+                          (integrante.is_blood_donor && podeDoarSangue(integrante.last_blood_donation, integrante.gender));
 
     return matchBusca && matchFuncao && matchStatus && matchDoador && matchDisponivel;
   });
@@ -426,7 +437,7 @@ export default function LiderancaPage() {
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-50 text-red-700">
                               Sim
                             </span>
-                            {podeDoarSangue(integrante.last_blood_donation) && (
+                            {podeDoarSangue(integrante.last_blood_donation, integrante.gender) && (
                               <div className="text-xs text-green-600 mt-1 font-medium">
                                 Pode doar novamente!
                               </div>
