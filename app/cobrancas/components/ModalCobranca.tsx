@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { Dialog } from '@headlessui/react';
 import { 
   Close, 
   CalendarMonth,
   Person,
   AttachMoney,
-  Search
+  Search,
+  Check,
+  FilterList
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from '@/lib/database.types';
 import AlertaPersonalizado from './AlertaPersonalizado';
 
 // Interfaces
@@ -22,26 +26,17 @@ interface Integrante {
   avatar_url?: string;
 }
 
-interface Parcela {
-  numero: number;
-  mesVencimento: number;
-  anoVencimento: number;
-  valor: number;
-}
-
 interface Cobranca {
   id?: string;
   nome: string;
   valor: number;
   mesVencimento: number;
   anoVencimento: number;
-  isParcelado: boolean;
-  parcelas: number;
   integrantesSelecionados: string[];
 }
 
 interface ModalCobrancaProps {
-  supabase: any;
+  supabase: SupabaseClient<Database>;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -56,28 +51,22 @@ export default function ModalCobranca({
   cobrancaId 
 }: ModalCobrancaProps) {
   // Estados
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
-  const [integrantesAtivos, setIntegrantesAtivos] = useState<Integrante[]>([]);
-  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
-  const [busca, setBusca] = useState<string>('');
-  const [statusOptions, setStatusOptions] = useState<{id: string, name: string}[]>([]);
-  
-  // Estado da cobrança
   const [cobranca, setCobranca] = useState<Cobranca>({
     nome: '',
     valor: 0,
     mesVencimento: new Date().getMonth() + 1,
     anoVencimento: new Date().getFullYear(),
-    isParcelado: false,
-    parcelas: 1,
     integrantesSelecionados: []
   });
-  
-  // Estado das parcelas
-  const [detalhesParcelas, setDetalhesParcelas] = useState<Parcela[]>([]);
-  
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
+  const [integrantesAtivos, setIntegrantesAtivos] = useState<Integrante[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [filtroNome, setFiltroNome] = useState<string>('');
+  const [statusOptions, setStatusOptions] = useState<{id: string, name: string}[]>([]);
+
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [alerta, setAlerta] = useState<{
     mensagem: string;
@@ -85,7 +74,7 @@ export default function ModalCobranca({
     aberto: boolean;
   }>({
     mensagem: '',
-    tipo: 'erro',
+    tipo: 'sucesso',
     aberto: false
   });
   
@@ -202,25 +191,6 @@ export default function ModalCobranca({
             ? integrantesCobranca.map((item: any) => item.integrante_id) 
             : [];
           
-          // Buscar parcelas se for parcelado
-          let parcelas: Parcela[] = [];
-          if (cobrancaData.is_parcelado) {
-            const { data: parcelasData } = await supabase
-              .from('cobranca_parcelas')
-              .select('*')
-              .eq('cobranca_id', cobrancaId)
-              .order('numero_parcela');
-            
-            if (parcelasData) {
-              parcelas = parcelasData.map((p: any) => ({
-                numero: p.numero_parcela,
-                mesVencimento: p.mes_vencimento,
-                anoVencimento: p.ano_vencimento,
-                valor: p.valor
-              }));
-            }
-          }
-          
           // Atualizar estado
           setCobranca({
             id: cobrancaData.id,
@@ -228,14 +198,8 @@ export default function ModalCobranca({
             valor: cobrancaData.valor,
             mesVencimento: cobrancaData.mes_vencimento,
             anoVencimento: cobrancaData.ano_vencimento,
-            isParcelado: cobrancaData.is_parcelado,
-            parcelas: cobrancaData.parcelas || 1,
             integrantesSelecionados
           });
-          
-          if (parcelas.length > 0) {
-            setDetalhesParcelas(parcelas);
-          }
         }
       } catch (error) {
         console.error('Erro ao carregar dados da cobrança:', error);
@@ -248,60 +212,6 @@ export default function ModalCobranca({
       carregarCobranca();
     }
   }, [supabase, isOpen, cobrancaId]);
-  
-  // Gerar detalhes das parcelas automaticamente
-  useEffect(() => {
-    if (!cobranca.isParcelado || cobranca.parcelas <= 1) {
-      setDetalhesParcelas([]);
-      return;
-    }
-    
-    // Calcular valor de cada parcela
-    const valorParcela = Number((cobranca.valor / cobranca.parcelas).toFixed(2));
-    // Ajustar a última parcela para compensar arredondamentos
-    const valorUltimaParcela = Number((cobranca.valor - (valorParcela * (cobranca.parcelas - 1))).toFixed(2));
-    
-    // Gerar parcelas
-    const parcelas: Parcela[] = [];
-    let mesAtual = cobranca.mesVencimento;
-    let anoAtual = cobranca.anoVencimento;
-    
-    for (let i = 1; i <= cobranca.parcelas; i++) {
-      parcelas.push({
-        numero: i,
-        mesVencimento: mesAtual,
-        anoVencimento: anoAtual,
-        valor: i === cobranca.parcelas ? valorUltimaParcela : valorParcela
-      });
-      
-      // Avançar para o próximo mês
-      mesAtual++;
-      if (mesAtual > 12) {
-        mesAtual = 1;
-        anoAtual++;
-      }
-    }
-    
-    setDetalhesParcelas(parcelas);
-  }, [cobranca.isParcelado, cobranca.parcelas, cobranca.valor, cobranca.mesVencimento, cobranca.anoVencimento]);
-  
-  // Atualizar parcela específica
-  const atualizarParcela = (index: number, campo: keyof Parcela, valor: any) => {
-    const novasParcelas = [...detalhesParcelas];
-    novasParcelas[index] = {
-      ...novasParcelas[index],
-      [campo]: valor
-    };
-    setDetalhesParcelas(novasParcelas);
-  };
-  
-  // Verificar se a soma das parcelas é igual ao valor total
-  const validarParcelas = () => {
-    if (detalhesParcelas.length === 0) return true;
-    
-    const somaValores = detalhesParcelas.reduce((total, parcela) => total + parcela.valor, 0);
-    return Math.abs(somaValores - cobranca.valor) < 0.01; // Tolerância para arredondamentos
-  };
   
   // Manipular mudanças nos campos da cobrança
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -381,8 +291,8 @@ export default function ModalCobranca({
     }
     
     // Filtrar por busca
-    if (busca) {
-      const termoBusca = busca.toLowerCase();
+    if (filtroNome) {
+      const termoBusca = filtroNome.toLowerCase();
       integrantesFiltrados = integrantesFiltrados.filter(
         integrante => 
           integrante.name.toLowerCase().includes(termoBusca) || 
@@ -396,7 +306,7 @@ export default function ModalCobranca({
   // Memoizar a lista de integrantes filtrados para evitar recálculos desnecessários
   const integrantesFiltrados = useMemo(() => {
     return _filtrarIntegrantes();
-  }, [integrantes, filtroStatus, busca]);
+  }, [integrantes, filtroStatus, filtroNome]);
   
   // Salvar cobrança
   const salvarCobranca = async () => {
@@ -409,81 +319,33 @@ export default function ModalCobranca({
       return;
     }
     
-    // Verificar se as parcelas não ultrapassam a data de vencimento final
-    if (cobranca.isParcelado && detalhesParcelas.length > 0) {
-      const ultimaParcela = detalhesParcelas[detalhesParcelas.length - 1];
-      if (
-        (ultimaParcela.anoVencimento > cobranca.anoVencimento) || 
-        (ultimaParcela.anoVencimento === cobranca.anoVencimento && 
-         ultimaParcela.mesVencimento > cobranca.mesVencimento)
-      ) {
-        setAlerta({
-          mensagem: 'A data da última parcela não pode ser superior ao vencimento da cobrança.',
-          tipo: 'erro',
-          aberto: true
-        });
-        return;
-      }
-    }
-    
     setSaving(true);
     
     try {
-      // Caso esteja editando uma cobrança existente
-      if (cobranca.id) {
-        // Atualizar cobrança existente
-        await supabase
+      // Se temos um ID, é uma edição
+      if (cobrancaId) {
+        // Atualizar a cobrança
+        const { error: updateError } = await supabase
           .from('cobrancas')
           .update({
             nome: cobranca.nome,
             valor: cobranca.valor,
             mes_vencimento: cobranca.mesVencimento,
             ano_vencimento: cobranca.anoVencimento,
-            is_parcelado: cobranca.isParcelado,
-            parcelas: cobranca.isParcelado ? cobranca.parcelas : null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', cobranca.id);
-          
-        // Gerenciar parcelas se for parcelado
-        if (cobranca.isParcelado) {
-          // Remover parcelas existentes
-          await supabase
-            .from('cobranca_parcelas')
-            .delete()
-            .eq('cobranca_id', cobranca.id);
-          
-          // Inserir novas parcelas
-          const parcelasParaInserir = detalhesParcelas.map(parcela => ({
-            cobranca_id: cobranca.id,
-            numero_parcela: parcela.numero,
-            mes_vencimento: parcela.mesVencimento,
-            ano_vencimento: parcela.anoVencimento,
-            valor: parcela.valor
-          }));
-          
-          await supabase
-            .from('cobranca_parcelas')
-            .insert(parcelasParaInserir);
+          .eq('id', cobrancaId);
+        
+        if (updateError) {
+          throw updateError;
         }
         
-        // Gerenciar relações com integrantes
-        // Remover relações existentes
-        await supabase
-          .from('cobranca_integrantes')
-          .delete()
-          .eq('cobranca_id', cobranca.id);
-        
-        // Inserir novas relações
-        const relacoesParaInserir = cobranca.integrantesSelecionados.map(integranteId => ({
-          cobranca_id: cobranca.id,
-          integrante_id: integranteId,
-          status: 'Pendente'
-        }));
-        
-        await supabase
-          .from('cobranca_integrantes')
-          .insert(relacoesParaInserir);
+        // Mensagem de sucesso
+        setAlerta({
+          mensagem: 'Cobrança atualizada com sucesso!',
+          tipo: 'sucesso',
+          aberto: true
+        });
       } else {
         // Criar uma cobrança para cada integrante selecionado
         for (const integranteId of cobranca.integrantesSelecionados) {
@@ -496,9 +358,7 @@ export default function ModalCobranca({
               nome: cobranca.nome,
               valor: cobranca.valor,
               mes_vencimento: cobranca.mesVencimento,
-              ano_vencimento: cobranca.anoVencimento,
-              is_parcelado: cobranca.isParcelado,
-              parcelas: cobranca.isParcelado ? cobranca.parcelas : null
+              ano_vencimento: cobranca.anoVencimento
             })
             .select()
             .single();
@@ -510,27 +370,8 @@ export default function ModalCobranca({
           
           const cobrancaId = novaCobranca.id;
           
-          // 2. Criar parcelas para esta cobrança, se for parcelada
-          if (cobranca.isParcelado && detalhesParcelas.length > 0) {
-            const parcelasParaInserir = detalhesParcelas.map(parcela => ({
-              cobranca_id: cobrancaId,
-              numero_parcela: parcela.numero,
-              mes_vencimento: parcela.mesVencimento,
-              ano_vencimento: parcela.anoVencimento,
-              valor: parcela.valor
-            }));
-            
-            const { error: parcelasError } = await supabase
-              .from('cobranca_parcelas')
-              .insert(parcelasParaInserir);
-            
-            if (parcelasError) {
-              console.error(`Erro ao criar parcelas para cobrança ${cobrancaId}:`, parcelasError);
-            }
-          }
-          
           // 3. Criar a relação entre a cobrança e o integrante
-          const { error: relacaoError } = await supabase
+          const { error: integranteError } = await supabase
             .from('cobranca_integrantes')
             .insert({
               cobranca_id: cobrancaId,
@@ -538,19 +379,27 @@ export default function ModalCobranca({
               status: 'Pendente'
             });
           
-          if (relacaoError) {
-            console.error(`Erro ao criar relação para cobrança ${cobrancaId} e integrante ${integranteId}:`, relacaoError);
+          if (integranteError) {
+            console.error(`Erro ao relacionar cobrança ${cobrancaId} com integrante ${integranteId}:`, integranteError);
           }
         }
+        
+        // Mensagem de sucesso
+        setAlerta({
+          mensagem: `Cobrança criada com sucesso para ${cobranca.integrantesSelecionados.length} integrante(s)!`,
+          tipo: 'sucesso',
+          aberto: true
+        });
       }
       
-      // Finalizar
-      onSave();
-      onClose();
-    } catch (error) {
+      // Reset do formulário e callback
+      setTimeout(() => {
+        onSave();
+      }, 1500);
+    } catch (error: any) {
       console.error('Erro ao salvar cobrança:', error);
       setAlerta({
-        mensagem: 'Ocorreu um erro ao salvar a cobrança. Tente novamente.',
+        mensagem: `Ocorreu um erro ao salvar: ${error.message}`,
         tipo: 'erro',
         aberto: true
       });
@@ -718,149 +567,6 @@ export default function ModalCobranca({
                   </div>
                 </div>
                 
-                {/* Parcelamento */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                  <div className="flex items-center mb-4">
-                    <div className="relative inline-block w-12 mr-2 align-middle select-none">
-                      <input
-                        type="checkbox"
-                        name="isParcelado"
-                        id="isParcelado"
-                        checked={cobranca.isParcelado}
-                        onChange={handleChange}
-                        className="absolute opacity-0 w-0 h-0"
-                      />
-                      <label 
-                        htmlFor="isParcelado" 
-                        className={`block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer transition-colors duration-200 ease-in-out ${cobranca.isParcelado ? 'bg-blue-500' : ''}`}
-                      >
-                        <span 
-                          className={`block h-6 w-6 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out ${cobranca.isParcelado ? 'translate-x-6' : 'translate-x-0'}`}
-                        ></span>
-                      </label>
-                    </div>
-                    <label htmlFor="isParcelado" className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Cobrança Parcelada
-                    </label>
-                  </div>
-                  
-                  {cobranca.isParcelado && (
-                    <div className="space-y-6 mt-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Número de Parcelas *
-                          </label>
-                          <input
-                            type="number"
-                            name="parcelas"
-                            value={cobranca.parcelas}
-                            onChange={handleChange}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            min="2"
-                            max="24"
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      {/* Detalhes das parcelas */}
-                      {detalhesParcelas.length > 0 && (
-                        <div className="mt-4">
-                          <h3 className="text-md font-medium text-gray-700 mb-3">Detalhes das Parcelas</h3>
-                          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-100">
-                                  <tr>
-                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Parcela
-                                    </th>
-                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Vencimento
-                                    </th>
-                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                      Valor
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                  {detalhesParcelas.map((parcela, index) => (
-                                    <tr key={parcela.numero} className="hover:bg-gray-50 transition-colors">
-                                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                          {parcela.numero}/{cobranca.parcelas}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                        <div className="flex space-x-2">
-                                          <select
-                                            value={parcela.mesVencimento}
-                                            onChange={(e) => atualizarParcela(index, 'mesVencimento', parseInt(e.target.value))}
-                                            className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                          >
-                                            {Array.from({ length: 12 }, (_, i) => i + 1).map((mes) => (
-                                              <option key={mes} value={mes}>
-                                                {formatarMes(mes)}
-                                              </option>
-                                            ))}
-                                          </select>
-                                          <select
-                                            value={parcela.anoVencimento}
-                                            onChange={(e) => atualizarParcela(index, 'anoVencimento', parseInt(e.target.value))}
-                                            className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                          >
-                                            {getAnos().map((ano) => (
-                                              <option key={ano} value={ano}>
-                                                {ano}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                        <div className="relative">
-                                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
-                                            R$
-                                          </span>
-                                          <input
-                                            type="number"
-                                            value={parcela.valor}
-                                            onChange={(e) => atualizarParcela(index, 'valor', parseFloat(e.target.value) || 0)}
-                                            className="pl-9 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm w-32"
-                                            min="0"
-                                            step="0.01"
-                                          />
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {/* Linha de total */}
-                                  <tr className="bg-gray-50">
-                                    <td colSpan={2} className="px-4 py-3 text-sm font-medium text-gray-700 text-right">
-                                      Total:
-                                    </td>
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-700">
-                                      <span className={`font-bold ${!validarParcelas() ? 'text-red-500' : 'text-green-500'}`}>
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(detalhesParcelas.reduce((total, p) => total + p.valor, 0))}
-                                      </span>
-                                      {!validarParcelas() && (
-                                        <span className="ml-2 text-xs text-red-500 bg-red-50 p-1 rounded">
-                                          Diferente do valor total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cobranca.valor)}
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
                 {/* Seleção de integrantes */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -930,8 +636,8 @@ export default function ModalCobranca({
                         </div>
                         <input
                           type="text"
-                          value={busca}
-                          onChange={(e) => setBusca(e.target.value)}
+                          value={filtroNome}
+                          onChange={(e) => setFiltroNome(e.target.value)}
                           className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                           placeholder="Nome, email ou apelido..."
                         />
