@@ -3,6 +3,7 @@ import { ThemeProvider } from "next-themes";
 import HeaderAuth from "@/components/header-auth";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
+import AuthManager from "@/components/auth/AuthManager";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -34,17 +35,19 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="h-full flex flex-col">
-            <nav className="w-full border-b border-b-foreground/10 h-16">
-              <div className="w-full flex justify-end items-center h-full p-3 px-5">
-                {!hasEnvVars ? null : <HeaderAuth />}
-              </div>
-            </nav>
+          <AuthManager>
+            <div className="h-full flex flex-col">
+              <nav className="w-full border-b border-b-foreground/10 h-16">
+                <div className="w-full flex justify-end items-center h-full p-3 px-5">
+                  {!hasEnvVars ? null : <HeaderAuth />}
+                </div>
+              </nav>
 
-            <div className="flex-1">
-              {children}
+              <div className="flex-1">
+                {children}
+              </div>
             </div>
-          </div>
+          </AuthManager>
         </ThemeProvider>
       </body>
     </html>

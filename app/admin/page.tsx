@@ -18,6 +18,7 @@ import {
   PieChart,
   Edit
 } from '@mui/icons-material';
+import ActiveUsers from '@/components/admin/ActiveUsers';
 
 // Importar o framer-motion dinamicamente para evitar erros de SSR
 const MotionDiv = dynamic(() => 
@@ -453,33 +454,30 @@ export default function AdminPage() {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Dashboard className="text-blue-600 text-2xl mr-3" />
-            <h1 className="text-2xl font-bold text-gray-900">Administração</h1>
+      <div className="space-y-6">
+        {message && (
+          <div
+            className={`p-4 rounded-lg ${
+              message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {message.text}
           </div>
-        </div>
+        )}
 
+        {/* Descrição da página */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md overflow-hidden mb-6">
           <div className="p-6">
-            <p className="text-gray-600 mb-6">Gerencie os integrantes do sistema e monitore as estatísticas</p>
-            
-            {message && (
-              <MotionComponent 
-                className={`p-4 rounded-md mb-6 ${message.type === 'success' ? 'bg-green-50 border-l-4 border-green-500 text-green-700' : 'bg-red-50 border-l-4 border-red-500 text-red-700'}`}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                {message.text}
-              </MotionComponent>
-            )}
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Administração</h1>
+            <p className="text-gray-600">Gerencie os integrantes do sistema e monitore as estatísticas</p>
           </div>
         </div>
 
-        {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Usuários Online */}
+          <ActiveUsers />
+
+          {/* Total de Integrantes */}
           <MotionComponent 
             className="bg-white rounded-xl shadow-md overflow-hidden"
             initial={{ opacity: 0, x: -20 }}
@@ -496,7 +494,8 @@ export default function AdminPage() {
               </div>
             </div>
           </MotionComponent>
-          
+
+          {/* Pendentes */}
           <MotionComponent 
             className="bg-white rounded-xl shadow-md overflow-hidden"
             initial={{ opacity: 0, y: -20 }}
@@ -513,31 +512,30 @@ export default function AdminPage() {
               </div>
             </div>
           </MotionComponent>
-          
+
+          {/* Integrantes por Status */}
           <MotionComponent 
             className="bg-white rounded-xl shadow-md overflow-hidden"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <div className="bg-gradient-to-r from-indigo-100 to-indigo-50 p-4">
-              <div className="flex items-center mb-3">
-                <PieChart className="text-indigo-600 mr-2" />
-                <p className="text-sm font-medium text-indigo-900">Integrantes por Status</p>
+            <div className="bg-gradient-to-r from-purple-100 to-purple-50 p-6">
+              <div className="flex items-center mb-4">
+                <div className="rounded-full bg-purple-500 p-3 mr-4 text-white">
+                  <PieChart />
+                </div>
+                <h3 className="text-lg font-medium text-purple-800">
+                  Integrantes por Status
+                </h3>
               </div>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {statusCounts.length > 0 ? (
-                  statusCounts.map((item) => (
-                    <div key={item.status} className="flex justify-between items-center">
-                      <span className="text-sm text-gray-700">{item.status}</span>
-                      <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
-                        {item.count}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">Nenhum integrante aprovado</p>
-                )}
+              <div className="space-y-2">
+                {statusCounts.map(({ status, count }) => (
+                  <div key={status} className="flex items-center">
+                    <span className="text-sm font-medium text-gray-600">{status}</span>
+                    <span className="ml-auto text-sm font-medium text-gray-900">{count}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </MotionComponent>

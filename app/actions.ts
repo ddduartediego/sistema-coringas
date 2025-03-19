@@ -129,6 +129,23 @@ export const resetPasswordAction = async (formData: FormData) => {
 
 export const signOutAction = async () => {
   const supabase = await createClient();
+  
+  // Obter a sessão atual
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (session) {
+    try {
+      // Remover a sessão ativa antes do logout
+      await supabase
+        .from('active_sessions')
+        .delete()
+        .eq('user_id', session.user.id);
+    } catch (error) {
+      console.error('Erro ao remover sessão ativa:', error);
+    }
+  }
+  
+  // Fazer logout
   await supabase.auth.signOut();
   return redirect("/");
 };
