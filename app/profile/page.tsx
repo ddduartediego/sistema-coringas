@@ -1113,46 +1113,13 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500">Estado</p>
                         {isEditing ? (
                           <div>
-                            <Controller
-                              name="estado"
-                              control={control}
-                              render={({ field }) => (
-                                <select
-                                  {...field}
-                                  value={field.value || ''}
-                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                                >
-                                  <option value="">Selecione o estado</option>
-                                  <option value="AC">Acre</option>
-                                  <option value="AL">Alagoas</option>
-                                  <option value="AP">Amapá</option>
-                                  <option value="AM">Amazonas</option>
-                                  <option value="BA">Bahia</option>
-                                  <option value="CE">Ceará</option>
-                                  <option value="DF">Distrito Federal</option>
-                                  <option value="ES">Espírito Santo</option>
-                                  <option value="GO">Goiás</option>
-                                  <option value="MA">Maranhão</option>
-                                  <option value="MT">Mato Grosso</option>
-                                  <option value="MS">Mato Grosso do Sul</option>
-                                  <option value="MG">Minas Gerais</option>
-                                  <option value="PA">Pará</option>
-                                  <option value="PB">Paraíba</option>
-                                  <option value="PR">Paraná</option>
-                                  <option value="PE">Pernambuco</option>
-                                  <option value="PI">Piauí</option>
-                                  <option value="RJ">Rio de Janeiro</option>
-                                  <option value="RN">Rio Grande do Norte</option>
-                                  <option value="RS">Rio Grande do Sul</option>
-                                  <option value="RO">Rondônia</option>
-                                  <option value="RR">Roraima</option>
-                                  <option value="SC">Santa Catarina</option>
-                                  <option value="SP">São Paulo</option>
-                                  <option value="SE">Sergipe</option>
-                                  <option value="TO">Tocantins</option>
-                                </select>
-                              )}
+                            <input
+                              type="text"
+                              value={watch('estado') || ''}
+                              readOnly
+                              className="w-full p-2 border border-gray-200 bg-gray-50 rounded-md text-gray-600"
                             />
+                            <p className="mt-1 text-xs text-gray-500">Preenchido automaticamente pelo CEP</p>
                           </div>
                         ) : (
                           <p className="font-medium">{profileData?.estado || '-'}</p>
@@ -1167,18 +1134,13 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500">Cidade</p>
                         {isEditing ? (
                           <div>
-                            <Controller
-                              name="localidade"
-                              control={control}
-                              render={({ field }) => (
-                                <input
-                                  {...field}
-                                  type="text"
-                                  value={field.value || ''}
-                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                                />
-                              )}
+                            <input
+                              type="text"
+                              value={watch('localidade') || ''}
+                              readOnly
+                              className="w-full p-2 border border-gray-200 bg-gray-50 rounded-md text-gray-600"
                             />
+                            <p className="mt-1 text-xs text-gray-500">Preenchido automaticamente pelo CEP</p>
                           </div>
                         ) : (
                           <p className="font-medium">{profileData?.localidade || '-'}</p>
@@ -1193,18 +1155,13 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500">Bairro</p>
                         {isEditing ? (
                           <div>
-                            <Controller
-                              name="bairro"
-                              control={control}
-                              render={({ field }) => (
-                                <input
-                                  {...field}
-                                  type="text"
-                                  value={field.value || ''}
-                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                                />
-                              )}
+                            <input
+                              type="text"
+                              value={watch('bairro') || ''}
+                              readOnly
+                              className="w-full p-2 border border-gray-200 bg-gray-50 rounded-md text-gray-600"
                             />
+                            <p className="mt-1 text-xs text-gray-500">Preenchido automaticamente pelo CEP</p>
                           </div>
                         ) : (
                           <p className="font-medium">{profileData?.bairro || '-'}</p>
@@ -1219,18 +1176,13 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500">Logradouro</p>
                         {isEditing ? (
                           <div>
-                            <Controller
-                              name="logradouro"
-                              control={control}
-                              render={({ field }) => (
-                                <input
-                                  {...field}
-                                  type="text"
-                                  value={field.value || ''}
-                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                                />
-                              )}
+                            <input
+                              type="text"
+                              value={watch('logradouro') || ''}
+                              readOnly
+                              className="w-full p-2 border border-gray-200 bg-gray-50 rounded-md text-gray-600"
                             />
+                            <p className="mt-1 text-xs text-gray-500">Preenchido automaticamente pelo CEP</p>
                           </div>
                         ) : (
                           <p className="font-medium">{profileData?.logradouro || '-'}</p>
