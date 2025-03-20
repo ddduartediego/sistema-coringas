@@ -10,10 +10,10 @@ export async function middleware(request: NextRequest) {
   // Rotas públicas (acessíveis sem login)
   const publicRoutes = ["/", "/sign-in", "/sign-up", "/auth/callback"];
   // Rotas protegidas (requerem login)
-  const protectedRoutes = ["/admin", "/profile", "/settings", "/pending", "/lideranca"];
+  const protectedRoutes = ["/admin", "/profile", "/settings", "/pending", "/lideranca", "/gamerun-admin"];
   
   // Rotas específicas de administrador
-  const adminRoutes = ["/admin", "/settings"];
+  const adminRoutes = ["/admin", "/settings", "/gamerun-admin"];
   
   // Rotas específicas de liderança
   const leaderRoutes = ["/lideranca"];

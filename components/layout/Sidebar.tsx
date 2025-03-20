@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   AttachMoney,
-  SupervisorAccount
+  SupervisorAccount,
+  SportsEsports,
+  Games
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -140,6 +142,39 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
               >
                 <Dashboard className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>Administração</span>}
+              </Link>
+            )}
+
+            {/* GameRun para todos os usuários */}
+            <Link 
+              href="/gamerun" 
+              className={`
+                flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 rounded-lg transition-colors
+                ${isLinkActive('/gamerun') || pathname.startsWith('/gamerun/') 
+                  ? 'bg-primary-50 text-primary-700 font-medium' 
+                  : 'text-gray-600 hover:bg-gray-50'}
+              `}
+              onClick={closeSidebarOnMobile}
+              title={isCollapsed ? "GameRun" : ""}
+            >
+              <Games className={isCollapsed ? '' : 'mr-3'} />
+              {!isCollapsed && <span>GameRun</span>}
+            </Link>
+
+            {isAdmin && (
+              <Link 
+                href="/gamerun-admin" 
+                className={`
+                  flex items-center ${isCollapsed ? 'justify-center px-2' : 'px-4'} py-3 rounded-lg transition-colors
+                  ${isLinkActive('/gamerun-admin') 
+                    ? 'bg-primary-50 text-primary-700 font-medium' 
+                    : 'text-gray-600 hover:bg-gray-50'}
+                `}
+                onClick={closeSidebarOnMobile}
+                title={isCollapsed ? "GameRun Admin" : ""}
+              >
+                <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
+                {!isCollapsed && <span>GameRun Admin</span>}
               </Link>
             )}
 

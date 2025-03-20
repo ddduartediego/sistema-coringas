@@ -213,6 +213,99 @@ export interface Database {
           updated_at?: string | null;
         };
       };
+      games: {
+        Row: {
+          id: string;
+          titulo: string;
+          descricao_curta: string;
+          descricao: string;
+          quantidade_integrantes: number;
+          data_inicio: string | null;
+          imagem_url: string | null;
+          status: string; // pendente, ativo, inativo, encerrado
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          titulo: string;
+          descricao_curta: string;
+          descricao: string;
+          quantidade_integrantes: number;
+          data_inicio?: string | null;
+          imagem_url?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          titulo?: string;
+          descricao_curta?: string;
+          descricao?: string;
+          quantidade_integrantes?: number;
+          data_inicio?: string | null;
+          imagem_url?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+      };
+      game_equipes: {
+        Row: {
+          id: string;
+          game_id: string;
+          nome: string;
+          status: string; // pendente, ativa, rejeitada
+          lider_id: string;
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          game_id: string;
+          nome: string;
+          status?: string;
+          lider_id: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          game_id?: string;
+          nome?: string;
+          status?: string;
+          lider_id?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+      };
+      equipe_integrantes: {
+        Row: {
+          id: string;
+          equipe_id: string;
+          integrante_id: string;
+          status: string; // pendente, ativo, removido
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          equipe_id: string;
+          integrante_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          equipe_id?: string;
+          integrante_id?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+      };
     };
   };
 } 
