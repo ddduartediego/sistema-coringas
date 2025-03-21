@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Users } from "lucide-react";
-import { format } from "date-fns";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/lib/database.types';
+import { Refresh, SportsEsports } from '@mui/icons-material';
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/lib/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-import Image from "next/image";
 import Link from "next/link";
-import SafeImage from "@/components/ui/safe-image";
+import { motion } from 'framer-motion';
+import SafeImage from '@/components/ui/safe-image';
+import AlertaPersonalizado from '../gamerun-admin/components/AlertaPersonalizado';
 
 interface Game {
   id: string;
@@ -25,112 +23,206 @@ interface Game {
 }
 
 export default function GameRunPage() {
+  const supabase = createClientComponentClient<Database>();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+  const [alerta, setAlerta] = useState<{
+    mensagem: string;
+    tipo: 'sucesso' | 'erro' | 'info';
+    aberto: boolean;
+  }>({
+    mensagem: '',
+    tipo: 'sucesso',
+    aberto: false
+  });
+
+  // Carregar games ativos
+  const carregarGames = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from("games")
+        .select("*")
+        .eq("status", "ativo")
+        .order("data_inicio", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setGames(data || []);
+    } catch (error: any) {
+      console.error("Erro ao buscar games:", error);
+      setAlerta({
+        mensagem: `Erro ao carregar games: ${error.message}`,
+        tipo: 'erro',
+        aberto: true
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchGames() {
-      try {
-        const { data, error } = await supabase
-          .from("games")
-          .select("*")
-          .eq("status", "ativo")
-          .order("data_inicio", { ascending: true });
+    carregarGames();
+  }, []);
 
-        if (error) {
-          throw error;
-        }
+  // Fechar alerta
+  const fecharAlerta = () => {
+    setAlerta(prev => ({ ...prev, aberto: false }));
+  };
 
-        setGames(data || []);
-      } catch (error: any) {
-        console.error("Erro ao buscar games:", error);
-        toast({
-          title: "Erro ao carregar games",
-          description: error.message || "Ocorreu um erro ao buscar os games disponíveis.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchGames();
-  }, [toast]);
-
-  function formatDate(dateString: string | null) {
-    if (!dateString) return "Data não definida";
-    return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  // Formatar data para exibição
+  function formatarData(dataString: string | null) {
+    if (!dataString) return "Data não definida";
+    return format(new Date(dataString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   }
 
-  return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">GameRun - Jogos Disponíveis</h1>
-      </div>
+  // Calcular tempo para o início do game
+  function calcularTempoRestante(dataString: string | null) {
+    if (!dataString) return "Data não definida";
+    
+    const agora = new Date();
+    const dataInicio = new Date(dataString);
+    
+    if (agora > dataInicio) {
+      return "Em andamento";
+    }
+    
+    try {
+      return formatDistanceToNow(dataInicio, { 
+        locale: ptBR, 
+        addSuffix: true 
+      });
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return "Data inválida";
+    }
+  }
 
+  const placeholderImage = '/gamerun-placeholder.png'; // Usar imagem padrão caso não tenha imagem
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">GameRun - Jogos Disponíveis</h1>
+          <p className="mt-1 text-gray-600">Confira os games disponíveis e participe com sua equipe.</p>
+        </div>
+        
+        <div className="flex space-x-4">
+          <button
+            type="button"
+            onClick={carregarGames}
+            className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
+          >
+            <Refresh className="mr-2 h-5 w-5" />
+            Atualizar
+          </button>
+        </div>
+      </div>
+      
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-xl text-gray-500">Carregando games...</p>
+        <div className="flex h-64 items-center justify-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-primary-500"></div>
         </div>
       ) : games.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
-          <h3 className="text-xl font-semibold text-gray-700">Nenhum game disponível no momento</h3>
-          <p className="text-gray-500 mt-2">Fique atento! Novos games serão anunciados em breve.</p>
+        <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+          <SportsEsports className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-lg font-medium text-gray-900">Nenhum game disponível no momento</h3>
+          <p className="mt-1 text-gray-500">Fique atento! Novos games serão anunciados em breve.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {games.map((game) => (
-            <Card key={game.id} className="overflow-hidden flex flex-col h-full border-2 hover:border-primary transition-all">
-              <div className="relative h-48 bg-gray-100">
-                {game.imagem_url ? (
+            <motion.div
+              key={game.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition hover:shadow-lg"
+            >
+              {/* Status Badge */}
+              <div className="absolute left-4 top-4 z-10">
+                <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
+                  Ativo
+                </span>
+              </div>
+              
+              {/* Imagem */}
+              <div className="mx-auto mt-6 h-24 w-24 overflow-hidden rounded-full bg-gray-100">
+                <div className="relative h-full w-full">
                   <SafeImage
-                    src={game.imagem_url}
+                    src={game.imagem_url || placeholderImage}
                     alt={game.titulo}
                     fill
-                    style={{ objectFit: "cover" }}
-                    fallbackHeight={192}
-                    fallbackWidth={384}
+                    style={{ objectFit: 'cover' }}
+                    sizes="(max-width: 768px) 100px, 96px"
+                    fallbackHeight={96}
+                    fallbackWidth={96}
                   />
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-gray-200">
-                    <p className="text-gray-500">Sem imagem</p>
-                  </div>
-                )}
+                </div>
               </div>
-
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl">{game.titulo}</CardTitle>
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    Ativo
-                  </Badge>
+              
+              {/* Conteúdo */}
+              <div className="flex flex-1 flex-col p-6">
+                <h3 className="mb-2 text-center text-xl font-semibold text-gray-900">{game.titulo}</h3>
+                <p className="mb-4 text-sm text-gray-600">{game.descricao_curta}</p>
+                
+                <div className="mt-auto space-y-3">
+                  {/* Integrantes por Equipe */}
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span className="inline-block mr-2 h-4 w-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </span>
+                    <span>{game.quantidade_integrantes} {game.quantidade_integrantes === 1 ? 'integrante' : 'integrantes'} por equipe</span>
+                  </div>
+                  
+                  {/* Data de Início / Countdown */}
+                  <div className="flex items-center text-sm text-gray-500">
+                    <span className="inline-block mr-2 h-4 w-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
+                    </span>
+                    <span>{calcularTempoRestante(game.data_inicio)}</span>
+                  </div>
+                  
+                  {/* Botão de Detalhes */}
+                  <div className="flex pt-4">
+                    <Link 
+                      href={`/gamerun/${game.id}`}
+                      className="w-full flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
+                    >
+                      <span className="inline-block mr-2 h-4 w-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                          <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                      </span>
+                      Ver Detalhes
+                    </Link>
+                  </div>
                 </div>
-                <CardDescription className="line-clamp-2">{game.descricao_curta}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="flex-grow">
-                <div className="flex items-center mb-2 text-gray-600">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  <span className="text-sm">{formatDate(game.data_inicio)}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span className="text-sm">{game.quantidade_integrantes} integrantes por equipe</span>
-                </div>
-              </CardContent>
-
-              <CardFooter className="pt-2">
-                <Link href={`/gamerun/${game.id}`} className="w-full">
-                  <Button variant="default" className="w-full">
-                    Ver Detalhes
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
+              </div>
+            </motion.div>
           ))}
         </div>
       )}
+      
+      <AlertaPersonalizado
+        mensagem={alerta.mensagem}
+        tipo={alerta.tipo}
+        aberto={alerta.aberto}
+        onClose={fecharAlerta}
+      />
     </div>
   );
 } 
