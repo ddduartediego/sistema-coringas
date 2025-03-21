@@ -5,7 +5,7 @@ import { CloudUpload, Image as ImageIcon, Close } from '@mui/icons-material';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
-import SafeImage from '../../../components/ui/safe-image';
+import SafeImage from '@/components/ui/safe-image';
 
 interface ImageUploaderProps {
   currentImageUrl: string | null;
