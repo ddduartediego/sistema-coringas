@@ -18,6 +18,7 @@ interface GameCardProps {
   quantidade_integrantes: number;
   imagem_url: string | null;
   status: string;
+  tipo: string;
   onOpenModal: (gameId: string) => void;
   supabase: SupabaseClient<Database>;
   onGameUpdated: () => void;
@@ -31,6 +32,7 @@ export default function GameCard({
   quantidade_integrantes,
   imagem_url,
   status,
+  tipo,
   onOpenModal,
   supabase,
   onGameUpdated
@@ -150,7 +152,7 @@ export default function GameCard({
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition hover:shadow-lg">
       {/* Status Badge */}
-      <div className="absolute left-4 top-4 z-10">
+      <div className="absolute left-4 top-4 z-10 flex flex-col space-y-2">
         <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
           status === 'ativo' ? 'bg-green-100 text-green-800' :
           status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
@@ -160,6 +162,9 @@ export default function GameCard({
           {status === 'pendente' ? 'Pendente' :
            status === 'ativo' ? 'Ativo' :
            status === 'inativo' ? 'Inativo' : 'Encerrado'}
+        </span>
+        <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+          {tipo || 'Online'}
         </span>
       </div>
       

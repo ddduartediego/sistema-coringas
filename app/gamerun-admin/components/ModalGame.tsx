@@ -39,6 +39,7 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
+  tipo: string;
 }
 
 interface ModalGameProps {
@@ -57,7 +58,8 @@ const gameSchema = z.object({
   quantidade_integrantes: z.number().min(1, 'Quantidade de integrantes deve ser no mínimo 1'),
   data_inicio: z.string().optional(),
   imagem_url: z.string().optional(),
-  status: z.string()
+  status: z.string(),
+  tipo: z.string()
 });
 
 export default function ModalGame({ 
@@ -75,7 +77,8 @@ export default function ModalGame({
     quantidade_integrantes: 1,
     data_inicio: null,
     imagem_url: null,
-    status: 'pendente'
+    status: 'pendente',
+    tipo: 'Online'
   });
 
   const [modoEdicao, setModoEdicao] = useState(false);
@@ -83,6 +86,11 @@ export default function ModalGame({
   const [saving, setSaving] = useState(false);
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [tiposGame, setTiposGame] = useState<{tipo: string, descricao: string}[]>([
+    { tipo: 'Online', descricao: 'Game totalmente online' },
+    { tipo: 'Presencial', descricao: 'Game presencial' },
+    { tipo: 'Híbrido', descricao: 'Game com atividades online e presenciais' }
+  ]);
   
   const [alerta, setAlerta] = useState<{
     mensagem: string;
@@ -185,6 +193,28 @@ export default function ModalGame({
       carregarEquipes();
     }
   }, [isOpen, gameId, supabase]);
+
+  // Carregar tipos de games da tabela de configurações
+  useEffect(() => {
+    const carregarTiposGame = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('configuracoes_game')
+          .select('tipo, descricao')
+          .eq('ativo', true);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setTiposGame(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tipos de game:', error);
+      }
+    };
+    
+    carregarTiposGame();
+  }, [supabase]);
 
   // Alternar modo de edição
   const toggleModoEdicao = () => {
@@ -473,6 +503,22 @@ export default function ModalGame({
                         <option value="ativo">Ativo</option>
                         <option value="inativo">Inativo</option>
                         <option value="encerrado">Encerrado</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Tipo do Game
+                      </label>
+                      <select
+                        {...register('tipo')}
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        {tiposGame.map((tipo) => (
+                          <option key={tipo.tipo} value={tipo.tipo}>
+                            {tipo.tipo}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

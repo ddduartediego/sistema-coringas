@@ -22,6 +22,7 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
+  tipo: string;
 }
 
 interface EquipeAtual {
@@ -266,9 +267,14 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                   <CardTitle className="text-2xl">{game.titulo}</CardTitle>
                   <CardDescription className="mt-2">{game.descricao_curta}</CardDescription>
                 </div>
-                <Badge variant={game.status === 'ativo' ? 'default' : 'secondary'}>
-                  {game.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                </Badge>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    Ativo
+                  </Badge>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {game.tipo || 'Online'}
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

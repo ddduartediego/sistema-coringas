@@ -20,6 +20,7 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
+  tipo: string;
 }
 
 export default function GameRunPage() {
@@ -132,7 +133,7 @@ export default function GameRunPage() {
           <p className="mt-1 text-gray-500">Fique atento! Novos games serão anunciados em breve.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {games.map((game) => (
             <motion.div
               key={game.id}
@@ -142,9 +143,12 @@ export default function GameRunPage() {
               className="relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition hover:shadow-lg"
             >
               {/* Status Badge */}
-              <div className="absolute left-4 top-4 z-10">
+              <div className="absolute left-4 top-4 z-10 flex flex-col space-y-2">
                 <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
                   Ativo
+                </span>
+                <span className="inline-flex rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                  {game.tipo || 'Online'}
                 </span>
               </div>
               
