@@ -14,8 +14,8 @@ import {
   ChevronRight,
   AttachMoney,
   SupervisorAccount,
-  SportsEsports,
-  Games
+  VideogameAssetOff,
+  VideogameAsset,
 } from '@mui/icons-material';
 import SafeImage from '../ui/safe-image';
 
@@ -162,7 +162,7 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
               onClick={closeSidebarOnMobile}
               title={isCollapsed ? "GameRun" : ""}
             >
-              <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
+              <VideogameAsset className={isCollapsed ? '' : 'mr-3'} />
               {!isCollapsed && <span>GameRun</span>}
             </Link>
 
@@ -178,7 +178,7 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
                 onClick={closeSidebarOnMobile}
                 title={isCollapsed ? "GameRun Admin" : ""}
               >
-                <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
+                <VideogameAssetOff className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>GameRun Admin</span>}
               </Link>
             )}
