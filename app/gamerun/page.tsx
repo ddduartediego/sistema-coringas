@@ -105,22 +105,20 @@ export default function GameRunPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">GameRun - Jogos Disponíveis</h1>
-          <p className="mt-1 text-gray-600">Confira os games disponíveis e participe com sua equipe.</p>
-        </div>
-        
-        <div className="flex space-x-4">
-          <button
-            type="button"
-            onClick={carregarGames}
-            className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
-          >
-            <Refresh className="mr-2 h-5 w-5" />
-            Atualizar
-          </button>
-        </div>
+      <div className="mb-8 rounded-lg bg-blue-50 p-6 shadow-sm">
+        <h1 className="text-3xl font-bold text-gray-900">GameRun - Jogos Disponíveis</h1>
+        <p className="mt-1 text-gray-600">Confira os games disponíveis e participe com sua equipe.</p>
+      </div>
+      
+      <div className="mb-8 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={carregarGames}
+          className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
+        >
+          <Refresh className="mr-2 h-5 w-5" />
+          Atualizar
+        </button>
       </div>
       
       {loading ? (
