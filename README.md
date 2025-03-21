@@ -107,3 +107,4 @@ Por padrão, um usuário administrador é criado com o email `dd.duartediego@gma
 - Tailwind CSS
 - Material UI Icons
 - React Hook Form + Zod
+# Trigger Vercel deploy Thu Mar 20 23:41:40 -03 2025
