@@ -473,24 +473,46 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Usuários Online */}
           <ActiveUsers />
 
-          {/* Total de Integrantes */}
+          {/* Total de Integrantes com Integrantes por Status */}
           <MotionComponent 
             className="bg-white rounded-xl shadow-md overflow-hidden"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-6 flex items-center">
-              <div className="rounded-full bg-blue-500 p-3 mr-4 text-white">
-                <Person />
+            <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-6">
+              <div className="flex items-center mb-4">
+                <div className="rounded-full bg-blue-500 p-3 mr-4 text-white">
+                  <Person />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Total de Integrantes</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-blue-800">Total de Integrantes</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              
+              {/* Integrado: Integrantes por Status */}
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center mb-2">
+                  <div className="rounded-full bg-purple-500 p-2 mr-2 text-white">
+                    <PieChart fontSize="small" />
+                  </div>
+                  <h3 className="text-sm font-medium text-purple-800">
+                    Integrantes por Status
+                  </h3>
+                </div>
+                <div className="space-y-1">
+                  {statusCounts.map(({ status, count }) => (
+                    <div key={status} className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-gray-600">{status}</span>
+                      <span className="text-xs font-medium text-gray-900">{count}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </MotionComponent>
@@ -509,33 +531,6 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-yellow-800">Pendentes</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-              </div>
-            </div>
-          </MotionComponent>
-
-          {/* Integrantes por Status */}
-          <MotionComponent 
-            className="bg-white rounded-xl shadow-md overflow-hidden"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <div className="bg-gradient-to-r from-purple-100 to-purple-50 p-6">
-              <div className="flex items-center mb-4">
-                <div className="rounded-full bg-purple-500 p-3 mr-4 text-white">
-                  <PieChart />
-                </div>
-                <h3 className="text-lg font-medium text-purple-800">
-                  Integrantes por Status
-                </h3>
-              </div>
-              <div className="space-y-2">
-                {statusCounts.map(({ status, count }) => (
-                  <div key={status} className="flex items-center">
-                    <span className="text-sm font-medium text-gray-600">{status}</span>
-                    <span className="ml-auto text-sm font-medium text-gray-900">{count}</span>
-                  </div>
-                ))}
               </div>
             </div>
           </MotionComponent>
