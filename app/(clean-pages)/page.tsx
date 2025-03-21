@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FaGoogle, FaUsers, FaCalendarAlt, FaFileInvoiceDollar, FaUserCog, FaChevronRight, FaArrowRight } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import SafeImage from '@/components/ui/safe-image';
 
 // Componente de cartão para funcionalidades
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
@@ -127,12 +128,14 @@ export default function HomePage() {
                       ease: "easeInOut" 
                     }}
                   >
-                    <Image 
+                    <SafeImage 
                       src="/coringas_logo.jpeg" 
                       alt="Coringas DEVS Logo" 
                       width={200}
                       height={200}
                       className="object-cover h-full w-full rounded-full"
+                      fallbackWidth={200}
+                      fallbackHeight={200}
                     />
                   </motion.div>
                 </motion.div>

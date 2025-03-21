@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Person, 
   Dashboard, 
-  Settings,
+  Settings, 
   Menu as MenuIcon,
   Close as CloseIcon,
   ChevronLeft,
@@ -17,6 +17,7 @@ import {
   SportsEsports,
   Games
 } from '@mui/icons-material';
+import SafeImage from '../ui/safe-image';
 
 interface SidebarProps {
   isAdmin: boolean;
@@ -105,22 +106,26 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
           <div className={`p-2 border-b border-gray-100 flex ${isCollapsed ? 'justify-center items-center' : 'justify-center items-center'}`}>
             {isCollapsed ? (
               <div className="relative h-20 w-20">
-                <Image 
+                <SafeImage 
                   src="/76.png" 
                   alt="Logo Coringas" 
                   fill
                   style={{objectFit: 'contain'}}
                   priority
+                  fallbackHeight={80}
+                  fallbackWidth={80}
                 />
               </div>
             ) : (
               <div className="relative h-20 w-full">
-                <Image 
+                <SafeImage 
                   src="/75.png" 
                   alt="Sistema Coringas" 
                   fill
                   style={{objectFit: 'contain', objectPosition: 'center'}}
                   priority
+                  fallbackHeight={80}
+                  fallbackWidth={240}
                 />
               </div>
             )}
@@ -173,7 +178,7 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
                 onClick={closeSidebarOnMobile}
                 title={isCollapsed ? "GameRun Admin" : ""}
               >
-                <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
+                <SupervisorAccount className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>GameRun Admin</span>}
               </Link>
             )}

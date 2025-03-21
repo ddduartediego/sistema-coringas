@@ -44,9 +44,22 @@ yarn install
 ```
 NEXT_PUBLIC_SUPABASE_URL=sua-url-do-projeto
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anonima
+SUPABASE_SERVICE_ROLE_KEY=sua-chave-de-servico  # Importante para o upload de imagens
 ```
 
-### 4. Configurar autenticação com Google
+### 4. Configurar o Supabase Storage
+
+1. Acesse o painel do Supabase e vá para Storage.
+2. Crie um novo bucket chamado "images".
+3. Configure as políticas de acesso (RLS) para o bucket:
+   - Crie uma política para permitir SELECT para todos (condition: `TRUE`)
+   - Crie uma política para permitir INSERT para usuários autenticados (condition: `auth.role() = 'authenticated'`)
+   - Para desenvolvimento, você pode criar uma política que permita todas as operações (condition: `TRUE`)
+4. Para o upload de imagens funcionar corretamente, você precisará da chave de serviço (service_role):
+   - No painel do Supabase, vá para Project Settings > API
+   - Copie a "service_role key (secret)" e adicione-a ao seu arquivo `.env` como `SUPABASE_SERVICE_ROLE_KEY`
+
+### 5. Configurar autenticação com Google
 
 1. No painel do Supabase, vá para Authentication > Providers.
 2. Ative o provedor Google.
@@ -54,7 +67,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anonima
 4. Adicione o URI de redirecionamento que o Supabase fornece nas configurações do OAuth do Google.
 5. Preencha Client ID e Client Secret no Supabase.
 
-### 5. Rodar o projeto em desenvolvimento
+### 6. Rodar o projeto em desenvolvimento
 
 ```bash
 npm run dev
@@ -64,7 +77,7 @@ yarn dev
 
 O projeto estará disponível em http://localhost:3000
 
-### 6. Build para produção
+### 7. Build para produção
 
 ```bash
 npm run build

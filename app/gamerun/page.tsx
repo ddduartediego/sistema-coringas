@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
 import Link from "next/link";
+import SafeImage from "@/components/ui/safe-image";
 
 interface Game {
   id: string;
@@ -83,11 +84,13 @@ export default function GameRunPage() {
             <Card key={game.id} className="overflow-hidden flex flex-col h-full border-2 hover:border-primary transition-all">
               <div className="relative h-48 bg-gray-100">
                 {game.imagem_url ? (
-                  <Image
+                  <SafeImage
                     src={game.imagem_url}
                     alt={game.titulo}
                     fill
                     style={{ objectFit: "cover" }}
+                    fallbackHeight={192}
+                    fallbackWidth={384}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full bg-gray-200">
