@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import fs from 'fs';
 import path from 'path';
-import { Database } from '@/lib/database.types';
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
     const scriptContent = fs.readFileSync(scriptPath, 'utf8');
     
     // Executar o script no Supabase
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = createRouteHandlerClient<any>({ cookies });
     
     // Usar a API rpc para executar SQL personalizado
     const { data, error } = await supabase.rpc('execute_sql', {
