@@ -162,7 +162,7 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
               onClick={closeSidebarOnMobile}
               title={isCollapsed ? "GameRun" : ""}
             >
-              <Games className={isCollapsed ? '' : 'mr-3'} />
+              <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
               {!isCollapsed && <span>GameRun</span>}
             </Link>
 
@@ -178,7 +178,7 @@ export default function Sidebar({ isAdmin, isLeader, onCollapse }: SidebarProps)
                 onClick={closeSidebarOnMobile}
                 title={isCollapsed ? "GameRun Admin" : ""}
               >
-                <SupervisorAccount className={isCollapsed ? '' : 'mr-3'} />
+                <SportsEsports className={isCollapsed ? '' : 'mr-3'} />
                 {!isCollapsed && <span>GameRun Admin</span>}
               </Link>
             )}
