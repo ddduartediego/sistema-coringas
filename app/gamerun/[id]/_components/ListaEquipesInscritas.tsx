@@ -278,9 +278,6 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Ativa
-                        </Badge>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"

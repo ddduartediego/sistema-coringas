@@ -7,7 +7,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock } from "lucide-react";
+import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Equipe {
   id: string;
@@ -47,6 +49,9 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLider, setIsLider] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [novoNomeEquipe, setNovoNomeEquipe] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -69,6 +74,24 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
     async function fetchEquipeDetails() {
       try {
         setLoading(true);
+        
+        // Primeiro, buscar o perfil do usuário para obter o ID do perfil
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .single();
+          
+        if (profileError) {
+          console.error('Erro ao buscar perfil do usuário:', profileError);
+          throw new Error('Não foi possível verificar seu perfil');
+        }
+        
+        if (!profileData || !profileData.id) {
+          throw new Error('Perfil de usuário não encontrado');
+        }
+        
+        const perfilId = profileData.id as string;
         
         // Buscar detalhes da equipe
         const { data: equipeData, error: equipeError } = await supabase
@@ -93,7 +116,7 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
         }
 
         setEquipe(equipeData);
-        setIsLider(equipeData.lider_id === userId);
+        setIsLider(equipeData.lider_id === perfilId);
         
         // Buscar integrantes da equipe
         const { data: integrantesData, error: integrantesError } = await supabase
@@ -119,7 +142,7 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
         setIntegrantes(integrantesData || []);
 
         // Verificar se o usuário atual é integrante
-        const isIntegrante = integrantesData?.some(i => i.integrante_id === userId);
+        const isIntegrante = integrantesData?.some(i => i.integrante_id === perfilId);
         if (!isIntegrante) {
           toast({
             title: "Acesso negado",
@@ -144,6 +167,59 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
 
     fetchEquipeDetails();
   }, [equipeId, userId, router, toast]);
+
+  const abrirModalEditarEquipe = () => {
+    if (equipe) {
+      setNovoNomeEquipe(equipe.nome);
+      setShowEditModal(true);
+    }
+  };
+
+  const fecharModalEditarEquipe = () => {
+    setShowEditModal(false);
+  };
+
+  const salvarEdicaoEquipe = async () => {
+    if (!equipe || !novoNomeEquipe.trim()) return;
+    
+    try {
+      setIsSaving(true);
+      
+      // Verificar se o userId é nulo antes de continuar
+      if (!userId) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const { error } = await supabase
+        .from("game_equipes")
+        .update({ nome: novoNomeEquipe.trim() })
+        .eq("id", equipe.id);
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      setEquipe({
+        ...equipe,
+        nome: novoNomeEquipe.trim()
+      });
+      
+      setShowEditModal(false);
+      
+      toast({
+        title: "Equipe atualizada",
+        description: "O nome da equipe foi atualizado com sucesso.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao atualizar equipe:", error);
+      toast({
+        title: "Erro ao atualizar equipe",
+        description: error.message || "Não foi possível atualizar o nome da equipe.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -299,7 +375,7 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
                 <>
                   <Button 
                     className="w-full"
-                    onClick={() => router.push(`/gamerun/equipe/${equipe.id}/editar`)}
+                    onClick={abrirModalEditarEquipe}
                   >
                     Editar Informações da Equipe
                   </Button>
@@ -325,6 +401,51 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
           </Card>
         </div>
       </div>
+
+      {/* Modal para Editar Equipe */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-medium">Editar Informações da Equipe</h3>
+              <button 
+                onClick={fecharModalEditarEquipe} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome da Equipe</Label>
+                <Input
+                  id="nome"
+                  value={novoNomeEquipe}
+                  onChange={(e) => setNovoNomeEquipe(e.target.value)}
+                  placeholder="Digite o novo nome da equipe"
+                />
+              </div>
+            </div>
+            
+            <div className="p-4 border-t flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={fecharModalEditarEquipe}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={salvarEdicaoEquipe}
+                disabled={!novoNomeEquipe.trim() || isSaving}
+              >
+                {isSaving ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
