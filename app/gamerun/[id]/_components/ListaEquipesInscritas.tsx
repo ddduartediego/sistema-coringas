@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 
@@ -202,11 +202,10 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                 {equipesPendentes.map(equipe => (
                   <div 
                     key={equipe.id} 
-                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer group"
-                    onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}
+                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="cursor-pointer" onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}>
                         <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
                         <div className="text-sm text-gray-600 flex items-center">
                           <span className="mr-2">Líder: {equipe.lider_nome}</span>
@@ -216,9 +215,24 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                           </div>
                         </div>
                       </div>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                        Pendente
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          Pendente
+                        </Badge>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/gamerun/equipe/${equipe.id}/view`);
+                            }}
+                            className="text-gray-600 hover:text-gray-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -250,11 +264,10 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                 {equipesAtivas.map(equipe => (
                   <div 
                     key={equipe.id} 
-                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer group"
-                    onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}
+                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors group"
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="cursor-pointer" onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}>
                         <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
                         <div className="text-sm text-gray-600 flex items-center">
                           <span className="mr-2">Líder: {equipe.lider_nome}</span>
@@ -264,9 +277,24 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                           </div>
                         </div>
                       </div>
-                      <Badge className="bg-green-50 text-green-700 border-green-200">
-                        Ativa
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Ativa
+                        </Badge>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/gamerun/equipe/${equipe.id}/view`);
+                            }}
+                            className="text-gray-600 hover:text-gray-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

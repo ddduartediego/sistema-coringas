@@ -477,13 +477,6 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                       </div>
                     )}
                     
-                    {/* Informações do líder */}
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-700">
-                        <span className="font-medium">Líder da equipe:</span> {equipeAtual.lider_nome}
-                        {equipeAtual.is_owner && <span className="text-blue-600 ml-1">(Você)</span>}
-                      </p>
-                    </div>
                     
                     {/* Lista de integrantes */}
                     {equipeAtual.integrantes && equipeAtual.integrantes.length > 0 && (
@@ -508,16 +501,21 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         </div>
                       </div>
                     )}
+                    
+                    {/* Botão Gerenciar Equipe - visível apenas para o líder */}
+                    {equipeAtual.is_owner && (
+                      <div className="mt-4">
+                        <Button 
+                          variant="default"
+                          className="w-full"
+                          onClick={() => router.push(`/gamerun/equipe/${equipeAtual.id}`)}
+                        >
+                          <Users className="mr-2 h-4 w-4" />
+                          Gerenciar Equipe
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  
-                  <Button 
-                    variant="default"
-                    className="w-full"
-                    onClick={() => router.push(`/gamerun/equipe/${equipeAtual.id}`)}
-                  >
-                    <Users className="mr-2 h-4 w-4" />
-                    Gerenciar Equipe
-                  </Button>
                 </div>
               ) :
                 <div className="space-y-4">

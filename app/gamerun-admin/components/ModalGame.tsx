@@ -8,7 +8,10 @@ import {
   SportsEsports,
   Edit,
   People,
-  FilterList
+  FilterList,
+  CheckCircle,
+  DeleteOutline,
+  VisibilityOutlined
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -260,6 +263,42 @@ export default function ModalGame({
       console.error('Erro ao aprovar equipe:', error);
       setAlerta({
         mensagem: 'Erro ao aprovar equipe: ' + error.message,
+        tipo: 'erro',
+        aberto: true
+      });
+    }
+  };
+
+  // Excluir equipe
+  const excluirEquipe = async (equipeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('game_equipes')
+        .delete()
+        .eq('id', equipeId);
+      
+      if (error) {
+        console.error('Erro ao excluir equipe:', error);
+        setAlerta({
+          mensagem: 'Erro ao excluir equipe: ' + error.message,
+          tipo: 'erro',
+          aberto: true
+        });
+        return;
+      }
+      
+      // Atualizar a lista de equipes removendo a excluída
+      setEquipes(equipes.filter(equipe => equipe.id !== equipeId));
+      
+      setAlerta({
+        mensagem: 'Equipe excluída com sucesso!',
+        tipo: 'sucesso',
+        aberto: true
+      });
+    } catch (error: any) {
+      console.error('Erro ao excluir equipe:', error);
+      setAlerta({
+        mensagem: 'Erro ao excluir equipe: ' + error.message,
         tipo: 'erro',
         aberto: true
       });
@@ -685,14 +724,33 @@ export default function ModalGame({
                                     </span>
                                   </td>
                                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                    {equipe.status === 'pendente' && (
+                                    <div className="flex justify-end space-x-2">
                                       <button
-                                        onClick={() => aprovarEquipe(equipe.id)}
-                                        className="text-primary-600 hover:text-primary-900"
+                                        className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100"
+                                        title="Visualizar equipe"
+                                        onClick={() => window.open(`/gamerun/equipe/${equipe.id}/view`, '_blank')}
                                       >
-                                        Aprovar
+                                        <VisibilityOutlined fontSize="small" />
                                       </button>
-                                    )}
+                                      
+                                      {equipe.status === 'pendente' && (
+                                        <button
+                                          onClick={() => aprovarEquipe(equipe.id)}
+                                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                                          title="Aprovar equipe"
+                                        >
+                                          <CheckCircle fontSize="small" />
+                                        </button>
+                                      )}
+                                      
+                                      <button
+                                        onClick={() => excluirEquipe(equipe.id)}
+                                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                                        title="Excluir equipe"
+                                      >
+                                        <DeleteOutline fontSize="small" />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
