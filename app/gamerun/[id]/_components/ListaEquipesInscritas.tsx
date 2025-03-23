@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface Equipe {
   id: string;
@@ -27,6 +28,7 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
   const [mostrarPendentes, setMostrarPendentes] = useState(true);
   const [mostrarAtivas, setMostrarAtivas] = useState(true);
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     if (!gameId) return;
@@ -172,13 +174,16 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
     <Card className="mt-6">
       <CardHeader>
         <CardTitle>Equipes Inscritas</CardTitle>
+        <CardDescription>
+          Confira as equipes que já estão participando deste game
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Equipes pendentes */}
         {equipesPendentes.length > 0 && (
-          <div>
+          <div className="mb-6">
             <div 
-              className="flex items-center justify-between cursor-pointer mb-2"
+              className="flex items-center justify-between cursor-pointer mb-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
               onClick={() => setMostrarPendentes(!mostrarPendentes)}
             >
               <h3 className="text-lg font-medium flex items-center">
@@ -187,34 +192,33 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                 </Badge>
                 Equipes Pendentes
               </h3>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 {mostrarPendentes ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
             
             {mostrarPendentes && (
-              <div className="space-y-2">
+              <div className="space-y-2 ml-1 border-l-2 border-yellow-200 pl-3">
                 {equipesPendentes.map(equipe => (
                   <div 
                     key={equipe.id} 
-                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50"
+                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer group"
+                    onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{equipe.nome}</h4>
-                        <p className="text-sm text-gray-600">
-                          Líder: {equipe.lider_nome}
-                        </p>
+                        <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
+                        <div className="text-sm text-gray-600 flex items-center">
+                          <span className="mr-2">Líder: {equipe.lider_nome}</span>
+                          <div className="flex items-center">
+                            <Users className="h-3.5 w-3.5 text-gray-500 mr-1" />
+                            <span>{equipe.total_integrantes}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 sm:mt-0 flex items-center">
-                        <span className="mr-3 text-sm text-gray-600">
-                          <Users className="inline h-4 w-4 mr-1" />
-                          {equipe.total_integrantes} integrantes
-                        </span>
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Pendente
-                        </Badge>
-                      </div>
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        Pendente
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -227,7 +231,7 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
         {equipesAtivas.length > 0 && (
           <div>
             <div 
-              className="flex items-center justify-between cursor-pointer mb-2"
+              className="flex items-center justify-between cursor-pointer mb-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
               onClick={() => setMostrarAtivas(!mostrarAtivas)}
             >
               <h3 className="text-lg font-medium flex items-center">
@@ -236,34 +240,33 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                 </Badge>
                 Equipes Ativas
               </h3>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 {mostrarAtivas ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
             
             {mostrarAtivas && (
-              <div className="space-y-2">
+              <div className="space-y-2 ml-1 border-l-2 border-green-200 pl-3">
                 {equipesAtivas.map(equipe => (
                   <div 
                     key={equipe.id} 
-                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50"
+                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer group"
+                    onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{equipe.nome}</h4>
-                        <p className="text-sm text-gray-600">
-                          Líder: {equipe.lider_nome}
-                        </p>
+                        <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
+                        <div className="text-sm text-gray-600 flex items-center">
+                          <span className="mr-2">Líder: {equipe.lider_nome}</span>
+                          <div className="flex items-center">
+                            <Users className="h-3.5 w-3.5 text-gray-500 mr-1" />
+                            <span>{equipe.total_integrantes}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 sm:mt-0 flex items-center">
-                        <span className="mr-3 text-sm text-gray-600">
-                          <Users className="inline h-4 w-4 mr-1" />
-                          {equipe.total_integrantes} integrantes
-                        </span>
-                        <Badge className="bg-green-50 text-green-700 border-green-200">
-                          Ativa
-                        </Badge>
-                      </div>
+                      <Badge className="bg-green-50 text-green-700 border-green-200">
+                        Ativa
+                      </Badge>
                     </div>
                   </div>
                 ))}
