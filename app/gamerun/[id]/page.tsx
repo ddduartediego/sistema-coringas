@@ -1,6 +1,6 @@
 import GameDetailClient from './_components/GameDetailClient';
 
-// Usando `any` temporariamente para resolver o problema de build
-export default function GameDetailPage({ params }: any) {
-  return <GameDetailClient gameId={params.id} />;
+export default async function GameDetailPage({ params }: { params: { id: string } }) {
+  const { id } = await params;
+  return <GameDetailClient gameId={id} />;
 } 

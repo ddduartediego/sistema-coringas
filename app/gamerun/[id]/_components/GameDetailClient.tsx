@@ -10,8 +10,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock } from "lucide-react";
+import { CalendarIcon, Users, ArrowLeft, UserPlus } from "lucide-react";
 import SafeImage from "@/components/ui/safe-image";
+import ModalCriarEquipe from "./ModalCriarEquipe";
+import ListaEquipesInscritas from "./ListaEquipesInscritas";
 
 interface Game {
   id: string;
@@ -53,7 +55,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
   const [loading, setLoading] = useState(true);
   const [equipeAtual, setEquipeAtual] = useState<EquipeAtual | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [inscrevendo, setInscrevendo] = useState(false);
+  const [modalCriarEquipeAberto, setModalCriarEquipeAberto] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -139,82 +141,19 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     return format(new Date(dateString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   }
 
-  async function inscreverEquipe() {
-    if (!userId || !game) return;
+  // Função para abrir o modal de criação de equipe
+  function abrirModalCriarEquipe() {
+    setModalCriarEquipeAberto(true);
+  }
 
-    try {
-      setInscrevendo(true);
-      
-      // Verificar se o usuário já está inscrito em outra equipe neste game
-      const { data: existingTeam } = await supabase
-        .from("equipe_integrantes")
-        .select(`
-          equipe_id,
-          game_equipes!inner(
-            id,
-            game_id
-          )
-        `)
-        .eq("integrante_id", userId)
-        .eq("game_equipes.game_id", game.id)
-        .single();
-
-      if (existingTeam) {
-        toast({
-          title: "Já inscrito",
-          description: "Você já está inscrito em uma equipe para este game.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Criar nova equipe
-      const { data: novaEquipe, error: equipeError } = await supabase
-        .from("game_equipes")
-        .insert({
-          game_id: game.id,
-          nome: `Equipe de ${userId.substring(0, 8)}`, // Nome temporário
-          status: "pendente",
-          lider_id: userId
-        })
-        .select()
-        .single();
-
-      if (equipeError) throw equipeError;
-
-      // Adicionar o usuário como integrante (líder) da equipe
-      const { error: integranteError } = await supabase
-        .from("equipe_integrantes")
-        .insert({
-          equipe_id: novaEquipe.id,
-          integrante_id: userId,
-          status: "ativo" // Já aprovado por ser o líder
-        });
-
-      if (integranteError) throw integranteError;
-
-      setEquipeAtual({
-        id: novaEquipe.id,
-        nome: novaEquipe.nome,
-        status: novaEquipe.status,
-        participante: true
-      });
-
-      toast({
-        title: "Equipe criada com sucesso!",
-        description: "Sua equipe foi registrada e está aguardando aprovação.",
-      });
-
-    } catch (error: any) {
-      console.error("Erro ao inscrever equipe:", error);
-      toast({
-        title: "Erro ao criar equipe",
-        description: error.message || "Ocorreu um erro ao tentar criar sua equipe.",
-        variant: "destructive",
-      });
-    } finally {
-      setInscrevendo(false);
-    }
+  // Função chamada após criação bem-sucedida da equipe
+  function onEquipeCriada(equipe: { id: string; nome: string; status: string }) {
+    setEquipeAtual({
+      id: equipe.id,
+      nome: equipe.nome,
+      status: equipe.status,
+      participante: true
+    });
   }
 
   if (loading) {
@@ -346,7 +285,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                     Gerenciar Equipe
                   </Button>
                 </div>
-              ) : (
+              ) :
                 <div className="space-y-4">
                   <p className="text-gray-600">
                     Crie uma equipe para participar deste game. 
@@ -355,27 +294,28 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                   
                   <Button 
                     className="w-full"
-                    onClick={inscreverEquipe}
-                    disabled={inscrevendo}
+                    onClick={abrirModalCriarEquipe}
                   >
-                    {inscrevendo ? (
-                      <>
-                        <Clock className="mr-2 h-4 w-4 animate-spin" />
-                        Inscrevendo...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Criar Equipe
-                      </>
-                    )}
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Criar Equipe
                   </Button>
                 </div>
-              )}
+              }
             </CardContent>
           </Card>
+          
+          {/* Exibir a lista de equipes apenas se o usuário não estiver inscrito em nenhuma equipe */}
+          {!equipeAtual && <ListaEquipesInscritas gameId={gameId} />}
         </div>
       </div>
+      
+      {/* Modal para Criar Equipe */}
+      <ModalCriarEquipe 
+        isOpen={modalCriarEquipeAberto}
+        onClose={() => setModalCriarEquipeAberto(false)}
+        gameId={gameId}
+        onSuccess={onEquipeCriada}
+      />
     </div>
   );
 } 

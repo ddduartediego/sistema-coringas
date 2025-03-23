@@ -1,5 +1,6 @@
 import EquipeDetailClient from './_components/EquipeDetailClient';
 
-export default function EquipeDetailPage({ params }: any) {
-  return <EquipeDetailClient equipeId={params.id} />;
+export default async function EquipeDetailPage({ params }: { params: { id: string } }) {
+  const { id } = await params;
+  return <EquipeDetailClient equipeId={id} />;
 } 

@@ -28,8 +28,11 @@ interface Integrante {
   integrante_id: string;
   equipe_id: string;
   status: string;
+  is_owner: boolean;
+  created_at: string | null;
+  updated_at: string | null;
   user: {
-    nome: string;
+    name: string;
     email: string;
   } | null;
 }
@@ -96,9 +99,15 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
         const { data: integrantesData, error: integrantesError } = await supabase
           .from("equipe_integrantes")
           .select(`
-            *,
+            id,
+            equipe_id,
+            integrante_id,
+            status,
+            is_owner,
+            created_at,
+            updated_at,
             user:profiles(
-              nome,
+              name,
               email
             )
           `)
@@ -221,11 +230,11 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
                         className="flex items-center justify-between p-3 border rounded-md bg-gray-50"
                       >
                         <div>
-                          <p className="font-medium">{integrante.user?.nome || 'Usuário sem nome'}</p>
+                          <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
                           <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
                         </div>
                         <div className="flex items-center">
-                          {equipe.lider_id === integrante.integrante_id && (
+                          {integrante.is_owner && (
                             <Badge className="mr-2 bg-blue-100 text-blue-700 border-blue-200">
                               Líder
                             </Badge>
