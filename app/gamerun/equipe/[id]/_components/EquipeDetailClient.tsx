@@ -572,19 +572,23 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
               {isLider ? (
                 <>
                   <Button 
-                    className="w-full"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 flex items-center justify-center"
                     onClick={abrirModalEditarEquipe}
                   >
-                    Editar Informações da Equipe
+                    <span className="flex items-center justify-center text-center text-base font-medium">
+                      Editar Informações da Equipe
+                    </span>
                   </Button>
                   
                   {equipe.status === 'ativa' && (
                     <Button 
                       variant="outline"
-                      className="w-full"
+                      className="w-full border-blue-300 text-blue-700 hover:bg-blue-50 py-3 flex items-center justify-center"
                       onClick={() => router.push(`/gamerun/equipe/${equipe.id}/gerenciar`)}
                     >
-                      Gerenciar Solicitações
+                      <span className="flex items-center justify-center text-center text-base font-medium">
+                        Gerenciar Solicitações
+                      </span>
                     </Button>
                   )}
                 </>

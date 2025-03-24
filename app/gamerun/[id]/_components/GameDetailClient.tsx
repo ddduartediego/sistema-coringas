@@ -221,7 +221,6 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                 )
               `)
               .eq("equipe_id", participacao.equipe_id)
-              .eq("status", "ativo")
               .order("created_at", { ascending: true });
             
             // Buscar nome do líder
@@ -527,7 +526,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         <span>Sua solicitação está aguardando aprovação do líder.</span>
                       </div>
                       
-                      {/* Lista de informações da equipe no mesmo formato */}
+                      {/* Lista de integrantes incluindo pendentes para usuário pendente */}
                       <div className="mt-3 border-t border-yellow-200 pt-3">
                         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                           <Users className="h-4 w-4 mr-1 text-gray-500" />
@@ -535,12 +534,45 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         </h4>
                         
                         <div className="space-y-2">
+                          {/* Líder da equipe */}
                           <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center w-full px-2 py-1.5 rounded-md hover:bg-yellow-100">
-                              <span className="mr-2 font-medium">Líder:</span>
+                            <div className="flex items-center w-full px-2 py-2 rounded-md hover:bg-yellow-100">
+                              <div className="h-6 w-6 rounded-full bg-green-200 flex items-center justify-center text-green-700 mr-2">
+                                {equipeAtual.lider_nome?.charAt(0)?.toUpperCase() || 'L'}
+                              </div>
                               <span className="flex-1">{equipeAtual.lider_nome}</span>
-                              <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-800 border-yellow-200">
+                              <Badge variant="outline" className="ml-auto bg-green-100 text-green-800 border-green-200">
                                 Líder
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Integrantes ativos e você como pendente */}
+                          {equipeAtual.integrantes && equipeAtual.integrantes
+                            .filter(integrante => integrante.status === "ativo" && !integrante.is_owner)
+                            .map(integrante => (
+                            <div key={integrante.id} className="flex items-center text-sm">
+                              <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-yellow-100">
+                                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-2">
+                                  {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                </div>
+                                <span className="flex-1">{integrante.user?.name || 'Usuário sem nome'}</span>
+                                <Badge variant="outline" className="ml-auto bg-green-100 text-green-800 border-green-200">
+                                  Ativo
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {/* Você como solicitante pendente */}
+                          <div className="flex items-center text-sm">
+                            <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-yellow-100">
+                              <div className="h-6 w-6 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 mr-2">
+                                {userId?.charAt(0)?.toUpperCase() || 'U'}
+                              </div>
+                              <span className="flex-1">Você</span>
+                              <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-800 border-yellow-200">
+                                Pendente
                               </Badge>
                             </div>
                           </div>
@@ -601,8 +633,8 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         </h4>
                         <div className="space-y-2">
                           {/* Líder da equipe */}
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center w-full px-2 py-2 rounded-md hover:bg-green-100">
+                          <div className="flex items-center text-sm">
+                            <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-green-100">
                               <div className="h-6 w-6 rounded-full bg-green-200 flex items-center justify-center text-green-700 mr-2">
                                 {equipeAtual.lider_nome?.charAt(0)?.toUpperCase() || 'L'}
                               </div>
@@ -613,29 +645,35 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                             </div>
                           </div>
                           
-                          {/* Lista de integrantes */}
+                          {/* Lista de todos os integrantes, incluindo pendentes */}
                           {equipeAtual.integrantes && equipeAtual.integrantes
                             .filter(integrante => !integrante.is_owner) // Filtrar o líder da lista
-                            .map(integrante => (
-                            <div key={integrante.id} className="flex items-center text-sm">
-                              <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-green-100">
-                                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-2">
-                                  {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            .map(integrante => {
+                              // Definir cores com base no status
+                              const avatarClass = integrante.status === 'ativo' 
+                                ? "bg-blue-100 text-blue-700" 
+                                : "bg-yellow-100 text-yellow-700";
+                                
+                              const badgeClass = integrante.status === 'ativo'
+                                ? "bg-green-100 text-green-800 border-green-200"
+                                : "bg-yellow-100 text-yellow-800 border-yellow-200";
+                                
+                              const badgeText = integrante.status === 'ativo' ? "Ativo" : "Pendente";
+                              
+                              return (
+                                <div key={integrante.id} className="flex items-center text-sm">
+                                  <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-green-100">
+                                    <div className={`h-6 w-6 rounded-full ${avatarClass} flex items-center justify-center mr-2`}>
+                                      {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                    </div>
+                                    <span className="flex-1">{integrante.user?.name || 'Usuário sem nome'}</span>
+                                    <Badge variant="outline" className={`ml-auto ${badgeClass}`}>
+                                      {badgeText}
+                                    </Badge>
+                                  </div>
                                 </div>
-                                <span className="flex-1">{integrante.user?.name || 'Usuário sem nome'}</span>
-                                {integrante.status === 'pendente' && (
-                                  <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-800 border-yellow-200">
-                                    Pendente
-                                  </Badge>
-                                )}
-                                {integrante.status === 'ativo' && (
-                                  <Badge variant="outline" className="ml-auto bg-green-100 text-green-800 border-green-200">
-                                    Ativo
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                              );
+                            })}
                         </div>
                       </div>
                       
@@ -644,11 +682,12 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         <div className="mt-4">
                           <Button 
                             variant="default"
-                            className="w-full"
+                            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 flex items-center justify-center"
                             onClick={() => router.push(`/gamerun/equipe/${equipeAtual.id}`)}
                           >
-                            <Users className="mr-2 h-4 w-4" />
-                            Gerenciar Equipe
+                            <span className="flex items-center justify-center text-center text-base font-medium">
+                              Gerenciar Equipe
+                            </span>
                           </Button>
                         </div>
                       )}
@@ -670,11 +709,12 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                   </div>
                   
                   <Button 
-                    className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3"
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 flex items-center justify-center"
                     onClick={abrirModalCriarEquipe}
                   >
-                    <UserPlus className="mr-2 h-5 w-5" />
-                    Criar Minha Equipe
+                    <span className="flex items-center justify-center text-center text-base font-medium">
+                      Criar Minha Equipe
+                    </span>
                   </Button>
                 </div>
               }

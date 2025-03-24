@@ -207,9 +207,12 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                 <Button 
                   variant="outline" 
                   size="sm"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50 py-2 flex items-center justify-center"
                   onClick={() => router.push(`/gamerun/${equipe.game.id}`)}
                 >
-                  Ver detalhes do game
+                  <span className="flex items-center justify-center text-center">
+                    Ver detalhes do game
+                  </span>
                 </Button>
               </div>
               
@@ -292,6 +295,17 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                     Faça login para participar ou criar sua própria equipe.
                   </p>
                 </div>
+              )}
+              
+              {userId && (
+                <Button 
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 flex items-center justify-center"
+                  onClick={() => router.push(`/gamerun/${equipe.game.id}`)}
+                >
+                  <span className="flex items-center justify-center text-center text-base font-medium">
+                    Ver Game Completo
+                  </span>
+                </Button>
               )}
             </CardContent>
           </Card>

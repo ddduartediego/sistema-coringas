@@ -368,7 +368,8 @@ export default function ModalCriarEquipe({
                 <ul className="ml-5 list-disc text-sm text-gray-600">
                   <li>Você será definido como líder da equipe</li>
                   <li>A equipe ficará com status "pendente" até aprovação</li>
-                  <li>Você poderá convidar outros integrantes após a criação</li>
+                  <li>Outros integrantes poderão solicitar participação na equipe</li>
+                  <li>Você aprova ou rejeita as solicitações acessando Gerenciar Equipe</li>
                 </ul>
               </div>
               

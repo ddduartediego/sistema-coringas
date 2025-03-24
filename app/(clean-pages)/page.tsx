@@ -30,7 +30,7 @@ export default function HomePage() {
     {
       icon: <FaGamepad className="w-6 h-6" />,
       title: "GameRun",
-      description: "Games para voce participar!"
+      description: "Games para voce participar! Treinamentos, Games Online e Presenciais"
     },
     {
       icon: <FaUsers className="w-6 h-6" />,
