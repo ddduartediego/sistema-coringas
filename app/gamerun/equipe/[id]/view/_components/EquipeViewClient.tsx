@@ -109,7 +109,6 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
             )
           `)
           .eq("equipe_id", equipeId)
-          .eq("status", "ativo")
           .order("created_at", { ascending: true });
           
         if (integrantesError) throw integrantesError;
@@ -228,36 +227,56 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {integrantes.length === 0 ? (
-                    <p className="text-gray-500 col-span-2">Nenhum integrante ativo na equipe.</p>
+                    <p className="text-gray-500 col-span-2">Nenhum integrante encontrado nesta equipe.</p>
                   ) : (
-                    integrantes.map((integrante) => (
-                      <div 
-                        key={integrante.id} 
-                        className="flex items-center p-3 border rounded-md bg-gray-50"
-                      >
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-3 flex-shrink-0">
-                          {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
-                          {integrante.is_owner && (
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                              Líder
-                            </Badge>
-                          )}
-                          {integrante.status === 'pendente' && (
-                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
-                              Pendente
-                            </Badge>
-                          )}
-                          {integrante.status === 'ativo' && (
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 ml-2">
-                              Ativo
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                    <>
+                      {/* Primeiro os integrantes ativos */}
+                      {integrantes
+                        .filter(integrante => integrante.is_owner || integrante.status === 'ativo')
+                        .map((integrante) => (
+                          <div 
+                            key={integrante.id} 
+                            className="flex items-center p-3 border rounded-md bg-gray-50"
+                          >
+                            <div className={`h-10 w-10 rounded-full ${integrante.is_owner ? 'bg-green-200 text-green-700' : 'bg-blue-100 text-blue-700'} flex items-center justify-center mr-3 flex-shrink-0`}>
+                              {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                              {integrante.is_owner && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  Líder
+                                </Badge>
+                              )}
+                              {!integrante.is_owner && integrante.status === 'ativo' && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                  Ativo
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      
+                      {/* Depois os integrantes pendentes */}
+                      {integrantes
+                        .filter(integrante => !integrante.is_owner && integrante.status === 'pendente')
+                        .map((integrante) => (
+                          <div 
+                            key={integrante.id} 
+                            className="flex items-center p-3 border border-yellow-200 rounded-md bg-yellow-50"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-yellow-200 flex items-center justify-center text-yellow-700 mr-3 flex-shrink-0">
+                              {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                                Pendente
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                    </>
                   )}
                 </div>
               </div>
