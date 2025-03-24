@@ -538,7 +538,10 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center w-full px-2 py-1.5 rounded-md hover:bg-yellow-100">
                               <span className="mr-2 font-medium">Líder:</span>
-                              <span>{equipeAtual.lider_nome}</span>
+                              <span className="flex-1">{equipeAtual.lider_nome}</span>
+                              <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-800 border-yellow-200">
+                                Líder
+                              </Badge>
                             </div>
                           </div>
                         </div>
@@ -599,9 +602,14 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                         <div className="space-y-2">
                           {/* Líder da equipe */}
                           <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center w-full px-2 py-1.5 rounded-md hover:bg-green-100">
-                              <span className="mr-2 font-medium">Líder:</span>
-                              <span>{equipeAtual.lider_nome}</span>
+                            <div className="flex items-center w-full px-2 py-2 rounded-md hover:bg-green-100">
+                              <div className="h-6 w-6 rounded-full bg-green-200 flex items-center justify-center text-green-700 mr-2">
+                                {equipeAtual.lider_nome?.charAt(0)?.toUpperCase() || 'L'}
+                              </div>
+                              <span className="flex-1">{equipeAtual.lider_nome}</span>
+                              <Badge variant="outline" className="ml-auto bg-green-100 text-green-800 border-green-200">
+                                Líder
+                              </Badge>
                             </div>
                           </div>
                           
@@ -610,8 +618,21 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                             .filter(integrante => !integrante.is_owner) // Filtrar o líder da lista
                             .map(integrante => (
                             <div key={integrante.id} className="flex items-center text-sm">
-                              <div className="w-full flex justify-between items-center px-2 py-1.5 rounded-md hover:bg-green-100">
-                                <span>{integrante.user?.name || 'Usuário sem nome'}</span>
+                              <div className="w-full flex items-center px-2 py-2 rounded-md hover:bg-green-100">
+                                <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-2">
+                                  {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                                </div>
+                                <span className="flex-1">{integrante.user?.name || 'Usuário sem nome'}</span>
+                                {integrante.status === 'pendente' && (
+                                  <Badge variant="outline" className="ml-auto bg-yellow-100 text-yellow-800 border-yellow-200">
+                                    Pendente
+                                  </Badge>
+                                )}
+                                {integrante.status === 'ativo' && (
+                                  <Badge variant="outline" className="ml-auto bg-green-100 text-green-800 border-green-200">
+                                    Ativo
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           ))}

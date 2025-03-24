@@ -440,9 +440,14 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
                           key={integrante.id} 
                           className="flex items-center justify-between p-3 border border-amber-200 rounded-md bg-amber-50"
                         >
-                          <div>
-                            <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
-                            <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 mr-3 flex-shrink-0">
+                              {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </div>
+                            <div>
+                              <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                              <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
+                            </div>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 mr-2">
@@ -485,9 +490,14 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
                         key={integrante.id} 
                         className="flex items-center justify-between p-3 border rounded-md bg-gray-50"
                       >
-                        <div>
-                          <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
-                          <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-3 flex-shrink-0">
+                            {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                            <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
+                          </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           {integrante.is_owner && (

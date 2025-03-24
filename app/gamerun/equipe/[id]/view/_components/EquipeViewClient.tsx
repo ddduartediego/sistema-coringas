@@ -232,14 +232,24 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                         key={integrante.id} 
                         className="flex items-center p-3 border rounded-md bg-gray-50"
                       >
-                        <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center mr-3">
-                          <User className="h-4 w-4 text-primary-700" />
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 mr-3 flex-shrink-0">
+                          {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
                           {integrante.is_owner && (
                             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                               Líder
+                            </Badge>
+                          )}
+                          {integrante.status === 'pendente' && (
+                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
+                              Pendente
+                            </Badge>
+                          )}
+                          {integrante.status === 'ativo' && (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 ml-2">
+                              Ativo
                             </Badge>
                           )}
                         </div>

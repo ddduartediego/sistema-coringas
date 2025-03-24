@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaGoogle, FaUsers, FaCalendarAlt, FaFileInvoiceDollar, FaUserCog, FaChevronRight, FaArrowRight } from 'react-icons/fa';
+import { FaGoogle, FaUsers, FaGamepad, FaFileInvoiceDollar, FaUserCog, FaChevronRight, FaArrowRight } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import SafeImage from '@/components/ui/safe-image';
 
@@ -28,14 +28,14 @@ export default function HomePage() {
   // Lista de funcionalidades
   const features = [
     {
+      icon: <FaGamepad className="w-6 h-6" />,
+      title: "GameRun",
+      description: "Games para voce participar!"
+    },
+    {
       icon: <FaUsers className="w-6 h-6" />,
       title: "Gestão de Integrantes",
       description: "Cadastro completo dos membros da equipe."
-    },
-    {
-      icon: <FaCalendarAlt className="w-6 h-6" />,
-      title: "Eventos",
-      description: "Organização e controle de todos os eventos da equipe"
     },
     {
       icon: <FaFileInvoiceDollar className="w-6 h-6" />,
@@ -60,12 +60,9 @@ export default function HomePage() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Plataforma de Gestão da <br />
-            <span className="text-blue-600">Equipe Coringas</span>
+            Plataforma<br />
+            <span className="text-yellow-600">Equipe Coringas</span>
           </h2>
-          <p className="text-lg text-gray-600 mb-8">
-            Sistema desenvolvido para apoiar na gestão da equipe
-          </p>
           <div className="flex space-x-4">
             <Link href="/sign-in" className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center">
               Entrar <FaArrowRight className="ml-2" />
@@ -168,9 +165,9 @@ export default function HomePage() {
       <section id="features" className="bg-white py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Funcionalidades do Sistema</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Saiba mais</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Conheça os principais módulos e ferramentas disponíveis para gerenciar a equipe.
+              Conheça os principais módulos e ferramentas disponíveis.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
