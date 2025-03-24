@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock, CheckCircle, AlertCircle, XCircle, X } from "lucide-react";
 import SafeImage from "@/components/ui/safe-image";
 import ModalCriarEquipe from "./ModalCriarEquipe";
 import ListaEquipesInscritas from "./ListaEquipesInscritas";
@@ -34,6 +34,7 @@ interface EquipeAtual {
   participante: boolean;
   is_owner?: boolean;
   lider_nome?: string;
+  status_integrante?: string;
   integrantes?: Array<{
     id: string;
     integrante_id: string;
@@ -43,6 +44,7 @@ interface EquipeAtual {
       name: string;
     } | null;
   }>;
+  total_integrantes: number;
 }
 
 interface GameEquipe {
@@ -162,7 +164,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
           console.log(`Encontradas ${equipes.length} equipes, verificando participação...`);
           const equipesIds = equipes.map(e => e.id);
           
-          // Verificar se o usuário é integrante de alguma dessas equipes
+          // Verificar se o usuário é integrante de alguma dessas equipes (agora sem filtrar por status)
           const { data: participacoes, error: participacoesError } = await supabase
             .from('equipe_integrantes')
             .select('*')
@@ -206,7 +208,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
             
             console.log('Detalhes da equipe encontrados:', equipeData);
             
-            // Buscar detalhes dos integrantes da equipe
+            // Buscar detalhes dos integrantes da equipe ATIVOS
             const { data: integrantesData, error: integrantesError } = await supabase
               .from("equipe_integrantes")
               .select(`
@@ -228,6 +230,19 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
               .select("name")
               .eq("id", equipeData.lider_id)
               .single();
+
+            // Contar total de integrantes ativos na equipe
+            const { count: totalIntegrantes } = await supabase
+              .from('equipe_integrantes')
+              .select('id', { count: 'exact', head: true })
+              .eq('equipe_id', participacao.equipe_id)
+              .eq('status', 'ativo');
+            
+            // Contar todos os integrantes (ativos + pendentes)
+            const { count: totalTodosIntegrantes } = await supabase
+              .from('equipe_integrantes')
+              .select('id', { count: 'exact', head: true })
+              .eq('equipe_id', participacao.equipe_id);
             
             setEquipeAtual({
               id: participacao.equipe_id,
@@ -235,8 +250,10 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
               status: equipeData.status,
               participante: true,
               is_owner: participacao.is_owner,
+              status_integrante: participacao.status,
               lider_nome: liderData?.name || "Líder desconhecido",
-              integrantes: integrantesData || []
+              integrantes: integrantesData || [],
+              total_integrantes: totalTodosIntegrantes || 0
             });
             
             console.log('Equipe definida para o usuário:', equipeAtual);
@@ -325,7 +342,8 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
         user: {
           name: "Você" // Nome temporário que será atualizado no próximo carregamento
         }
-      }]
+      }],
+      total_integrantes: 1
     });
     
     // Recarregar dados para ter informações completas
@@ -333,6 +351,62 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
       fetchGameDetails();
     }, 1000);
   }
+
+  // Função para retirar a solicitação de participação 
+  const retirarSolicitacao = async () => {
+    if (!equipeAtual?.id || !userId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Primeiro, buscar o perfil do usuário para obter o ID do perfil
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+        
+      if (profileError || !profileData) {
+        throw new Error("Não foi possível verificar seu perfil");
+      }
+      
+      const perfilId = profileData.id;
+      
+      // Deletar a solicitação de participação
+      const { error } = await supabase
+        .from('equipe_integrantes')
+        .delete()
+        .eq('equipe_id', equipeAtual.id)
+        .eq('integrante_id', perfilId);
+      
+      if (error) throw error;
+      
+      // Atualizar o estado
+      setEquipeAtual(null);
+      
+      toast({
+        title: "Solicitação retirada",
+        description: "Sua solicitação de participação foi retirada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Erro ao retirar solicitação:', error);
+      toast({
+        title: "Erro ao retirar solicitação",
+        description: error.message || "Não foi possível retirar sua solicitação. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função chamada quando uma participação é solicitada com sucesso
+  const handleParticipacaoSolicitada = async () => {
+    if (userId) {
+      // Recarregar os detalhes do game, incluindo o status de inscrição
+      await fetchGameDetails();
+    }
+  };
 
   if (loading) {
     return (
@@ -435,87 +509,130 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
           <Card>
             <CardHeader>
               <CardTitle>Status de Inscrição</CardTitle>
-              <CardDescription>
-                {equipeAtual 
-                  ? 'Você está inscrito neste game' 
-                  : 'Inscreva-se para participar deste game'}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {equipeAtual ? (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-md bg-green-50 border border-green-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium text-green-800 flex items-center">
-                        Equipe: {equipeAtual.nome} 
-                      </h3>
-                      <Badge className="ml-2 px-2" variant={
-                        equipeAtual.status === 'ativa' ? 'default' : 
-                        equipeAtual.status === 'pendente' ? 'outline' : 'destructive'
-                      }>
-                      </Badge>
-                    </div>
-                    
-                    {equipeAtual.status === 'pendente' && (
-                      <div className="bg-yellow-50 p-2 rounded-md text-sm text-yellow-800 border border-yellow-100 mt-2 mb-3 flex items-center">
+                  {/* Caso do usuário com solicitação pendente */}
+                  {equipeAtual.status_integrante === 'pendente' ? (
+                    <div className="p-4 rounded-md bg-yellow-50 border border-yellow-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-yellow-800 flex items-center">
+                          Equipe: {equipeAtual.nome} 
+                        </h3>
+                      </div>
+                      
+                      <div className="bg-yellow-100 p-3 rounded-md text-sm text-yellow-800 border border-yellow-200 mt-2 mb-3 flex items-center">
                         <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                        <span>Sua equipe está sendo analisada.</span>
+                        <span>Sua solicitação está aguardando aprovação do líder.</span>
                       </div>
-                    )}
-                    
-                    {equipeAtual.status === 'ativa' && (
-                      <div className="text-sm text-green-700 mb-3 flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                        <span>A participação da sua equipe foi aprovada.</span>
+                      
+                      {/* Lista de informações da equipe no mesmo formato */}
+                      <div className="mt-3 border-t border-yellow-200 pt-3">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                          <Users className="h-4 w-4 mr-1 text-gray-500" />
+                          Integrantes ({equipeAtual.total_integrantes})
+                        </h4>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center w-full px-2 py-1.5 rounded-md hover:bg-yellow-100">
+                              <span className="mr-2 font-medium">Líder:</span>
+                              <span>{equipeAtual.lider_nome}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    
-                    {equipeAtual.status === 'rejeitada' && (
-                      <div className="bg-red-50 p-2 rounded-md text-sm text-red-800 border border-red-100 mt-2 mb-3 flex items-center">
-                        <XCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                        <span><span className="font-medium">Equipe rejeitada:</span> Entre em contato com a administração para mais informações.</span>
+                      
+                      <div className="mt-4">
+                        <Button 
+                          variant="outline"
+                          className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={retirarSolicitacao}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Retirar solicitação
+                        </Button>
                       </div>
-                    )}
-                    
-                    
-                    {/* Lista de integrantes */}
-                    {equipeAtual.integrantes && equipeAtual.integrantes.length > 0 && (
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-md bg-green-50 border border-green-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-medium text-green-800 flex items-center">
+                          Equipe: {equipeAtual.nome} 
+                        </h3>
+                        <Badge className="ml-2 px-2" variant={
+                          equipeAtual.status === 'ativa' ? 'default' : 
+                          equipeAtual.status === 'pendente' ? 'outline' : 'destructive'
+                        }>
+                        </Badge>
+                      </div>
+                      
+                      {equipeAtual.status === 'pendente' && (
+                        <div className="bg-yellow-50 p-2 rounded-md text-sm text-yellow-800 border border-yellow-100 mt-2 mb-3 flex items-center">
+                          <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                          <span>Sua equipe está sendo analisada.</span>
+                        </div>
+                      )}
+                      
+                      {equipeAtual.status === 'ativa' && (
+                        <div className="text-sm text-green-700 mb-3 flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                          <span>A participação da equipe foi aprovada.</span>
+                        </div>
+                      )}
+                      
+                      {equipeAtual.status === 'rejeitada' && (
+                        <div className="bg-red-50 p-2 rounded-md text-sm text-red-800 border border-red-100 mt-2 mb-3 flex items-center">
+                          <XCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                          <span><span className="font-medium">Equipe rejeitada:</span> Entre em contato com a administração para mais informações.</span>
+                        </div>
+                      )}
+                      
+                      
+                      {/* Lista de integrantes */}
                       <div className="mt-3 border-t border-green-200 pt-3">
                         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                           <Users className="h-4 w-4 mr-1 text-gray-500" />
-                          Integrantes ({equipeAtual.integrantes.length})
+                          Integrantes ({equipeAtual.total_integrantes})
                         </h4>
-                        <div className="grid grid-cols-1 gap-1">
-                          {equipeAtual.integrantes.map(integrante => (
+                        <div className="space-y-2">
+                          {/* Líder da equipe */}
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center w-full px-2 py-1.5 rounded-md hover:bg-green-100">
+                              <span className="mr-2 font-medium">Líder:</span>
+                              <span>{equipeAtual.lider_nome}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Lista de integrantes */}
+                          {equipeAtual.integrantes && equipeAtual.integrantes
+                            .filter(integrante => !integrante.is_owner) // Filtrar o líder da lista
+                            .map(integrante => (
                             <div key={integrante.id} className="flex items-center text-sm">
-                              <div className="w-full flex justify-between items-center px-2 py-1 rounded-md hover:bg-green-100">
+                              <div className="w-full flex justify-between items-center px-2 py-1.5 rounded-md hover:bg-green-100">
                                 <span>{integrante.user?.name || 'Usuário sem nome'}</span>
-                                {integrante.is_owner && (
-                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                    Líder
-                                  </Badge>
-                                )}
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    )}
-                    
-                    {/* Botão Gerenciar Equipe - visível apenas para o líder */}
-                    {equipeAtual.is_owner && (
-                      <div className="mt-4">
-                        <Button 
-                          variant="default"
-                          className="w-full"
-                          onClick={() => router.push(`/gamerun/equipe/${equipeAtual.id}`)}
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          Gerenciar Equipe
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                      
+                      {/* Botão Gerenciar Equipe - visível apenas para o líder */}
+                      {equipeAtual.is_owner && (
+                        <div className="mt-4">
+                          <Button 
+                            variant="default"
+                            className="w-full"
+                            onClick={() => router.push(`/gamerun/equipe/${equipeAtual.id}`)}
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            Gerenciar Equipe
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) :
                 <div className="space-y-4">
@@ -525,6 +642,10 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                       Crie uma equipe para participar deste game. 
                       Você será o líder da equipe e poderá convidar outros participantes.
                     </p>
+                    <p className="text-gray-700">
+                    Ou solicite participação em uma das equipes abaixo. 
+                    </p>
+
                   </div>
                   
                   <Button 
@@ -541,7 +662,10 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
           
           {/* Exibir a lista de equipes independente se o usuário está inscrito ou não */}
           <div className="mt-6">
-            <ListaEquipesInscritas gameId={gameId} />
+            <ListaEquipesInscritas 
+              gameId={gameId} 
+              onParticipacaoSolicitada={handleParticipacaoSolicitada}
+            />
           </div>
         </div>
       </div>

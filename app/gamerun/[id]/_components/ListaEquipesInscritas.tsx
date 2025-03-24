@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, Eye, UserPlus, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
+import { Dialog, Transition } from '@headlessui/react';
 
 interface Equipe {
   id: string;
@@ -20,13 +21,21 @@ interface Equipe {
 
 interface ListaEquipesInscritasProps {
   gameId: string;
+  onParticipacaoSolicitada?: () => void;
 }
 
-export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasProps) {
+export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada }: ListaEquipesInscritasProps) {
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [mostrarPendentes, setMostrarPendentes] = useState(true);
   const [mostrarAtivas, setMostrarAtivas] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [perfilId, setPerfilId] = useState<string | null>(null);
+  const [jaInscrito, setJaInscrito] = useState(false);
+  const [solicitando, setSolicitando] = useState(false);
+  const [equipeSolicitada, setEquipeSolicitada] = useState<string | null>(null);
+  const [dialogAberto, setDialogAberto] = useState(false);
+  const [equipeNomeSolicitada, setEquipeNomeSolicitada] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -133,10 +142,142 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
     carregarEquipes();
   }, [gameId, toast]);
   
+  // Buscar informações do usuário logado
+  useEffect(() => {
+    async function getUser() {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        setUserId(data.user.id);
+        
+        // Buscar o perfil do usuário
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+          
+        if (!profileError && profileData) {
+          setPerfilId(profileData.id);
+        }
+      }
+    }
+    
+    getUser();
+  }, []);
+  
+  // Verificar se o usuário já está inscrito em alguma equipe deste game
+  useEffect(() => {
+    if (!perfilId || !gameId) return;
+    
+    async function verificarInscricao() {
+      try {
+        // Buscar todas as equipes do game
+        const { data: equipes, error: equipesError } = await supabase
+          .from('game_equipes')
+          .select('id')
+          .eq('game_id', gameId);
+        
+        if (equipesError) throw equipesError;
+        
+        if (equipes && equipes.length > 0) {
+          const equipesIds = equipes.map(e => e.id);
+          
+          // Verificar se o usuário é integrante de alguma dessas equipes
+          const { data: participacoes, error: participacoesError } = await supabase
+            .from('equipe_integrantes')
+            .select('equipe_id, status')
+            .eq('integrante_id', perfilId)
+            .in('equipe_id', equipesIds);
+          
+          if (participacoesError) throw participacoesError;
+          
+          // Se encontrou alguma participação, o usuário já está inscrito
+          setJaInscrito(participacoes !== null && participacoes.length > 0);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar inscrição:', error);
+      }
+    }
+    
+    verificarInscricao();
+  }, [gameId, perfilId]);
+  
   // Filtrar equipes por status
   const equipesPendentes = equipes.filter(equipe => equipe.status === 'pendente');
   const equipesAtivas = equipes.filter(equipe => equipe.status === 'ativa');
   
+  // Solicitar participação em uma equipe
+  const solicitarParticipacao = async (equipeId: string, equipeName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    if (!perfilId) {
+      toast({
+        title: "Erro ao solicitar participação",
+        description: "Você precisa estar logado para solicitar participação em uma equipe.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (jaInscrito) {
+      toast({
+        title: "Você já está inscrito",
+        description: "Você já participa ou solicitou participação em uma equipe deste game.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setSolicitando(true);
+      
+      // Inserir o usuário como integrante com status pendente
+      const { error } = await supabase
+        .from('equipe_integrantes')
+        .insert({
+          equipe_id: equipeId,
+          integrante_id: perfilId,
+          status: 'pendente',
+          is_owner: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+      
+      // Atualizar o estado para impedir novas solicitações
+      setJaInscrito(true);
+      // Guardar a equipe solicitada para exibir a mensagem
+      setEquipeSolicitada(equipeId);
+      setEquipeNomeSolicitada(equipeName);
+      
+      // Abrir o dialog em vez de mostrar o toast
+      setDialogAberto(true);
+    } catch (error: any) {
+      console.error('Erro ao solicitar participação:', error);
+      toast({
+        title: "Erro ao solicitar participação",
+        description: error.message || "Não foi possível enviar sua solicitação. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setSolicitando(false);
+    }
+  };
+
+  // Função para fechar o dialog e atualizar a página
+  const fecharDialogEAtualizar = () => {
+    setDialogAberto(false);
+    
+    // Notificar o componente pai que a participação foi solicitada
+    if (onParticipacaoSolicitada) {
+      onParticipacaoSolicitada();
+    }
+    
+    // Atualizar a página com uma recarga completa para garantir que todos os componentes sejam atualizados
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <Card className="mt-6">
@@ -175,7 +316,7 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
       <CardHeader>
         <CardTitle>Equipes Inscritas</CardTitle>
         <CardDescription>
-          Confira as equipes que já estão participando deste game
+          Confira as equipes que já estão participando deste game.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -278,6 +419,9 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Ativa
+                        </Badge>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
@@ -290,6 +434,20 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          
+                          {/* Botão para solicitar participação */}
+                          {perfilId && !jaInscrito && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => solicitarParticipacao(equipe.id, equipe.nome, e)}
+                              disabled={solicitando}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Solicitar participação"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -300,6 +458,62 @@ export default function ListaEquipesInscritas({ gameId }: ListaEquipesInscritasP
           </div>
         )}
       </CardContent>
+
+      {/* Dialog de confirmação */}
+      <Transition appear show={dialogAberto} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900"
+                  >
+                    Solicitação Enviada
+                  </Dialog.Title>
+                  
+                  <div className="mt-4 bg-blue-50 p-4 rounded-md border border-blue-100 flex items-start">
+                    <Check className="h-5 w-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <p className="text-blue-700">
+                      Sua solicitação para participar da equipe <span className="font-medium">{equipeNomeSolicitada}</span> foi enviada e está aguardando aprovação do líder.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      onClick={fecharDialogEAtualizar}
+                      className="w-32"
+                    >
+                      OK
+                    </Button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </Card>
   );
 } 

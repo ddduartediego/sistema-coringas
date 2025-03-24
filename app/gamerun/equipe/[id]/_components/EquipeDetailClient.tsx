@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock, X } from "lucide-react";
+import { CalendarIcon, Users, ArrowLeft, UserPlus, Clock, X, Check, XCircle, Trash } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -46,12 +46,15 @@ interface EquipeDetailClientProps {
 export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps) {
   const [equipe, setEquipe] = useState<Equipe | null>(null);
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
+  const [integrantesPendentes, setIntegrantesPendentes] = useState<Integrante[]>([]);
+  const [integrantesAtivos, setIntegrantesAtivos] = useState<Integrante[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLider, setIsLider] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [novoNomeEquipe, setNovoNomeEquipe] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [processandoIntegrante, setProcessandoIntegrante] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -118,7 +121,7 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
         setEquipe(equipeData);
         setIsLider(equipeData.lider_id === perfilId);
         
-        // Buscar integrantes da equipe
+        // Buscar integrantes da equipe, incluindo os pendentes
         const { data: integrantesData, error: integrantesError } = await supabase
           .from("equipe_integrantes")
           .select(`
@@ -139,7 +142,13 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
           
         if (integrantesError) throw integrantesError;
         
+        // Separar integrantes ativos e pendentes
+        const ativos = integrantesData?.filter(i => i.status === 'ativo') || [];
+        const pendentes = integrantesData?.filter(i => i.status === 'pendente') || [];
+        
         setIntegrantes(integrantesData || []);
+        setIntegrantesAtivos(ativos);
+        setIntegrantesPendentes(pendentes);
 
         // Verificar se o usuário atual é integrante
         const isIntegrante = integrantesData?.some(i => i.integrante_id === perfilId);
@@ -221,6 +230,128 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
     }
   };
 
+  // Função para aprovar um integrante pendente
+  const aprovarIntegrante = async (integranteId: string) => {
+    if (!isLider) return;
+    
+    try {
+      setProcessandoIntegrante(integranteId);
+      
+      const { error } = await supabase
+        .from("equipe_integrantes")
+        .update({ 
+          status: "ativo",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", integranteId);
+      
+      if (error) throw error;
+      
+      // Atualizar as listas de integrantes localmente
+      const integranteAprovado = integrantesPendentes.find(i => i.id === integranteId);
+      
+      if (integranteAprovado) {
+        // Remover da lista de pendentes
+        setIntegrantesPendentes(prev => prev.filter(i => i.id !== integranteId));
+        
+        // Adicionar à lista de ativos com status atualizado
+        const integranteAtualizado = { ...integranteAprovado, status: 'ativo' };
+        setIntegrantesAtivos(prev => [...prev, integranteAtualizado]);
+      }
+      
+      toast({
+        title: "Solicitação aprovada",
+        description: "O integrante foi adicionado à equipe com sucesso.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao aprovar integrante:", error);
+      toast({
+        title: "Erro ao aprovar integrante",
+        description: error.message || "Não foi possível aprovar a solicitação.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessandoIntegrante(null);
+    }
+  };
+  
+  // Função para rejeitar um integrante pendente
+  const rejeitarIntegrante = async (integranteId: string) => {
+    if (!isLider) return;
+    
+    try {
+      setProcessandoIntegrante(integranteId);
+      
+      const { error } = await supabase
+        .from("equipe_integrantes")
+        .delete()
+        .eq("id", integranteId);
+      
+      if (error) throw error;
+      
+      // Remover da lista de pendentes
+      setIntegrantesPendentes(prev => prev.filter(i => i.id !== integranteId));
+      
+      toast({
+        title: "Solicitação rejeitada",
+        description: "A solicitação de participação foi rejeitada.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao rejeitar integrante:", error);
+      toast({
+        title: "Erro ao rejeitar integrante",
+        description: error.message || "Não foi possível rejeitar a solicitação.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessandoIntegrante(null);
+    }
+  };
+
+  // Função para remover um integrante ativo
+  const removerIntegrante = async (integranteId: string) => {
+    if (!isLider) return;
+    
+    try {
+      setProcessandoIntegrante(integranteId);
+      
+      // Verificar se o integrante é o líder da equipe - não permitir remover o líder
+      const integranteParaRemover = integrantesAtivos.find(i => i.id === integranteId);
+      if (integranteParaRemover?.is_owner) {
+        toast({
+          title: "Operação não permitida",
+          description: "Não é possível remover o líder da equipe.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const { error } = await supabase
+        .from("equipe_integrantes")
+        .delete()
+        .eq("id", integranteId);
+      
+      if (error) throw error;
+      
+      // Remover da lista de integrantes ativos
+      setIntegrantesAtivos(prev => prev.filter(i => i.id !== integranteId));
+      
+      toast({
+        title: "Integrante removido",
+        description: "O integrante foi removido da equipe com sucesso.",
+      });
+    } catch (error: any) {
+      console.error("Erro ao remover integrante:", error);
+      toast({
+        title: "Erro ao remover integrante",
+        description: error.message || "Não foi possível remover o integrante.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessandoIntegrante(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -296,11 +427,60 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
               <div>
                 <h3 className="text-lg font-semibold mb-4">Integrantes da Equipe</h3>
                 
+                {/* Solicitações pendentes - visível apenas para o líder */}
+                {isLider && integrantesPendentes.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-md font-medium mb-2 text-amber-700 flex items-center">
+                      <Clock className="h-4 w-4 mr-1" />
+                      Solicitações pendentes ({integrantesPendentes.length})
+                    </h4>
+                    <div className="space-y-3 mb-6">
+                      {integrantesPendentes.map((integrante) => (
+                        <div 
+                          key={integrante.id} 
+                          className="flex items-center justify-between p-3 border border-amber-200 rounded-md bg-amber-50"
+                        >
+                          <div>
+                            <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                            <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 mr-2">
+                              Pendente
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                              onClick={() => aprovarIntegrante(integrante.id)}
+                              disabled={processandoIntegrante === integrante.id}
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              Aprovar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                              onClick={() => rejeitarIntegrante(integrante.id)}
+                              disabled={processandoIntegrante === integrante.id}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Rejeitar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Lista de integrantes ativos */}
                 <div className="space-y-3">
-                  {integrantes.length === 0 ? (
-                    <p className="text-gray-500">Nenhum integrante encontrado.</p>
+                  {integrantesAtivos.length === 0 ? (
+                    <p className="text-gray-500">Nenhum integrante ativo encontrado.</p>
                   ) : (
-                    integrantes.map((integrante) => (
+                    integrantesAtivos.map((integrante) => (
                       <div 
                         key={integrante.id} 
                         className="flex items-center justify-between p-3 border rounded-md bg-gray-50"
@@ -309,21 +489,29 @@ export default function EquipeDetailClient({ equipeId }: EquipeDetailClientProps
                           <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
                           <p className="text-sm text-gray-500">{integrante.user?.email || 'Email não disponível'}</p>
                         </div>
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-2">
                           {integrante.is_owner && (
                             <Badge className="mr-2 bg-blue-100 text-blue-700 border-blue-200">
                               Líder
                             </Badge>
                           )}
-                          <Badge variant="outline" className={
-                            integrante.status === 'ativo' ? 'bg-green-50 text-green-700 border-green-200' :
-                            integrante.status === 'pendente' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-red-50 text-red-700 border-red-200'
-                          }>
-                            {integrante.status === 'ativo' ? 'Ativo' :
-                             integrante.status === 'pendente' ? 'Pendente' : 
-                             'Inativo'}
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            Ativo
                           </Badge>
+                          
+                          {/* Botão para remover integrante (apenas visível para o líder e não aparece para o próprio líder) */}
+                          {isLider && !integrante.is_owner && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 ml-2"
+                              onClick={() => removerIntegrante(integrante.id)}
+                              disabled={processandoIntegrante === integrante.id}
+                              title="Remover integrante"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))
