@@ -407,6 +407,59 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
     }
   };
 
+  // Função para sair da equipe (para integrantes ativos que não são líderes)
+  const sairDaEquipe = async () => {
+    if (!equipeAtual?.id || !userId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Primeiro, buscar o perfil do usuário para obter o ID do perfil
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+        
+      if (profileError || !profileData) {
+        throw new Error("Não foi possível verificar seu perfil");
+      }
+      
+      const perfilId = profileData.id;
+      
+      // Verificar se o usuário é líder da equipe
+      if (equipeAtual.is_owner) {
+        throw new Error("O líder não pode simplesmente sair da equipe. Transfira a liderança primeiro ou exclua a equipe.");
+      }
+      
+      // Deletar a participação do integrante
+      const { error } = await supabase
+        .from('equipe_integrantes')
+        .delete()
+        .eq('equipe_id', equipeAtual.id)
+        .eq('integrante_id', perfilId);
+      
+      if (error) throw error;
+      
+      // Atualizar o estado
+      setEquipeAtual(null);
+      
+      toast({
+        title: "Você saiu da equipe",
+        description: "Você não faz mais parte desta equipe.",
+      });
+    } catch (error: any) {
+      console.error('Erro ao sair da equipe:', error);
+      toast({
+        title: "Erro ao sair da equipe",
+        description: error.message || "Não foi possível sair da equipe. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -687,6 +740,21 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
                           >
                             <span className="flex items-center justify-center text-center text-base font-medium">
                               Gerenciar Equipe
+                            </span>
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Botão Sair da Equipe - visível apenas para integrantes ativos que não são líderes */}
+                      {!equipeAtual.is_owner && equipeAtual.status_integrante === 'ativo' && (
+                        <div className="mt-4">
+                          <Button 
+                            variant="outline"
+                            className="w-full text-red-600 border-red-200 hover:bg-red-50 py-3 flex items-center justify-center"
+                            onClick={sairDaEquipe}
+                          >
+                            <span className="flex items-center justify-center text-center text-base font-medium">
+                              Sair da Equipe
                             </span>
                           </Button>
                         </div>
