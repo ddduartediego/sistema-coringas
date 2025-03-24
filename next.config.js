@@ -7,6 +7,9 @@ const nextConfig = {
   experimental: {
     typedRoutes: true,
   },
+  images: {
+    domains: ['tbdlpwprdkghmqmpkype.supabase.co'],
+  },
 }
 
 module.exports = nextConfig 
