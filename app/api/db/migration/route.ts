@@ -40,23 +40,25 @@ export async function POST(request: Request) {
 
     // Executar o script
     const supabase = createRouteHandlerClient<Database>({ cookies });
-
-    // Verificar se a função execute_sql existe
-    const { data: functionExists, error: functionCheckError } = await supabase
-      .from('pg_proc')
-      .select('proname')
-      .eq('proname', 'execute_sql')
-      .limit(1);
+    // Usar o cliente tipado como any para lidar com RPCs não definidas no tipo Database
+    const supabaseAny = supabase as any;
 
     let result;
     
-    if (functionCheckError || !functionExists || functionExists.length === 0) {
-      console.log('Função execute_sql não encontrada, executando SQL diretamente.');
+    try {
+      // Tenta primeiro usar a função execute_sql
+      console.log('Tentando executar migração via função execute_sql');
+      const { data, error } = await supabaseAny.rpc('execute_sql', { sql_query: scriptContent });
       
-      // Se a função não existir, executar o SQL diretamente via API RPC
-      // Essa é uma abordagem alternativa que funciona para algumas operações,
-      // mas pode ser limitada dependendo dos privilégios do cliente
+      if (error) {
+        throw error;
+      }
       
+      result = data || { status: 'success', message: 'Migração executada com sucesso via função execute_sql' };
+    } catch (error: any) {
+      console.log('Função execute_sql falhou, tentando método alternativo:', error.message);
+      
+      // Se a função falhar, tente executar o SQL diretamente via execute_raw_sql
       // Dividir o script em comandos separados
       const sqlCommands = scriptContent
         .split(';')
@@ -65,14 +67,25 @@ export async function POST(request: Request) {
       
       // Executar cada comando separadamente
       for (const cmd of sqlCommands) {
-        const { error } = await supabase.rpc('execute_raw_sql', { sql: cmd + ';' });
-        
-        if (error) {
-          console.error('Erro ao executar SQL direto:', error);
+        try {
+          const { error } = await supabaseAny.rpc('execute_raw_sql', { sql: cmd + ';' });
+          
+          if (error) {
+            console.error('Erro ao executar SQL direto:', error);
+            return NextResponse.json(
+              { 
+                error: `Falha ao executar migração direta: ${error.message}`,
+                details: error 
+              },
+              { status: 500 }
+            );
+          }
+        } catch (cmdError: any) {
+          console.error('Erro ao executar comando SQL:', cmdError);
           return NextResponse.json(
             { 
-              error: `Falha ao executar migração direta: ${error.message}`,
-              details: error 
+              error: `Falha ao executar comando SQL: ${cmdError.message}`,
+              details: cmdError 
             },
             { status: 500 }
           );
@@ -80,23 +93,6 @@ export async function POST(request: Request) {
       }
       
       result = { status: 'success', message: 'Migração executada com sucesso (método direto)' };
-    } else {
-      // Se a função existir, usar para executar o script
-      console.log('Executando migração via função execute_sql');
-      const { data, error } = await supabase.rpc('execute_sql', { sql_query: scriptContent });
-      
-      if (error) {
-        console.error('Erro ao executar SQL via função:', error);
-        return NextResponse.json(
-          { 
-            error: `Falha ao executar migração: ${error.message}`, 
-            details: error 
-          },
-          { status: 500 }
-        );
-      }
-      
-      result = data || { status: 'success', message: 'Migração executada com sucesso' };
     }
 
     return NextResponse.json({ result });

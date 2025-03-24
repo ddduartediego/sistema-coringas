@@ -127,21 +127,21 @@ export default function ModalCobranca({
         console.log('Exemplo de integrante:', data?.[0]);
         
         // Verificar se os status dos integrantes correspondem aos status disponíveis
-        if (statusOptions.length > 0) {
+        if (statusOptions.length > 0 && data && Array.isArray(data)) {
           const statusDisponiveis = statusOptions.map(s => s.name);
-          const integrantesComStatusInvalido = data?.filter(
-            (integrante: Integrante) => integrante.status && !statusDisponiveis.includes(integrante.status)
+          const integrantesComStatusInvalido = data.filter(
+            (integrante) => integrante && 'status' in integrante && integrante.status && !statusDisponiveis.includes(integrante.status)
           );
           
           if (integrantesComStatusInvalido && integrantesComStatusInvalido.length > 0) {
             console.warn(
               'Integrantes com status inválido:', 
-              integrantesComStatusInvalido.map((i: Integrante) => `${i.name}: ${i.status}`)
+              integrantesComStatusInvalido.map((i) => `${i.name}: ${i.status}`)
             );
             
             // Corrigir os status inválidos para exibição local (não altera o banco de dados)
-            const dadosCorrigidos = data.map((integrante: Integrante) => {
-              if (integrante.status && !statusDisponiveis.includes(integrante.status)) {
+            const dadosCorrigidos = data.map((integrante) => {
+              if (integrante && 'status' in integrante && integrante.status && !statusDisponiveis.includes(integrante.status)) {
                 console.log(`Corrigindo status de ${integrante.name} de "${integrante.status}" para null`);
                 return { ...integrante, status: null };
               }
