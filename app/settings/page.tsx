@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { Database } from '@/models/database.types';
 import AppLayout from '@/components/layout/AppLayout';
-import { Settings, Add, Delete, Edit, Save, Cancel } from '@mui/icons-material';
+import { Settings, Add, Delete, Edit, Save, Cancel, WhatsApp } from '@mui/icons-material';
+import WhatsAppSettings from '@/components/settings/WhatsAppSettings';
 
 interface ConfigItem {
   id: string;
   name: string;
 }
 
-type ConfigType = 'status' | 'roles';
+type ConfigType = 'status' | 'roles' | 'whatsapp';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -63,21 +64,21 @@ export default function SettingsPage() {
 
   // Obter lista ativa com base na aba
   const getActiveItems = () => {
-    return activeTab === 'status' ? statusItems : roleItems;
+    return activeTab === 'status' ? statusItems : activeTab === 'roles' ? roleItems : [];
   };
 
   // Definir lista ativa com base na aba
   const setActiveItems = (items: ConfigItem[]) => {
     if (activeTab === 'status') {
       setStatusItems(items);
-    } else {
+    } else if (activeTab === 'roles') {
       setRoleItems(items);
     }
   };
 
   // Obter tabela ativa com base na aba
   const getActiveTable = () => {
-    return activeTab === 'status' ? 'config_status' : 'config_roles';
+    return activeTab === 'status' ? 'config_status' : activeTab === 'roles' ? 'config_roles' : '';
   };
 
   // Iniciar edição
@@ -208,126 +209,142 @@ export default function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center mb-6">
-          <Settings className="text-primary-600 text-3xl mr-3" />
-          <h1 className="text-2xl font-bold text-gray-800">Configurações do Sistema</h1>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Configurações</h1>
 
-        {message && (
-          <div className={`p-4 rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {message.text}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={() => setActiveTab('status')}
+              className={`px-4 py-2 rounded-md ${
+                activeTab === 'status'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Status
+            </button>
+            <button
+              onClick={() => setActiveTab('roles')}
+              className={`px-4 py-2 rounded-md ${
+                activeTab === 'roles'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Funções
+            </button>
+            <button
+              onClick={() => setActiveTab('whatsapp')}
+              className={`px-4 py-2 rounded-md ${
+                activeTab === 'whatsapp'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              WhatsApp
+            </button>
           </div>
-        )}
 
-        {/* Abas */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="border-b">
-            <div className="flex">
-              <button
-                className={`px-6 py-3 font-medium ${activeTab === 'status' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={() => setActiveTab('status')}
-              >
-                Status de Integrantes
-              </button>
-              <button
-                className={`px-6 py-3 font-medium ${activeTab === 'roles' ? 'border-b-2 border-primary-600 text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={() => setActiveTab('roles')}
-              >
-                Funções na Equipe
-              </button>
+          {message && (
+            <div
+              className={`mb-4 p-4 rounded-md ${
+                message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}
+            >
+              {message.text}
             </div>
-          </div>
+          )}
 
-          <div className="p-6">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                {activeTab === 'status' ? 'Gerenciar Status' : 'Gerenciar Funções'}
-              </h2>
-              
-              <div className="flex mb-4">
+          {activeTab === 'whatsapp' ? (
+            <WhatsAppSettings />
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center mb-6">
                 <input
                   type="text"
                   value={newItemName}
                   onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder={`Novo ${activeTab === 'status' ? 'status' : 'função'}...`}
-                  className="flex-1 p-2 border border-gray-300 rounded-l-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Novo item"
+                  className="flex-1 px-4 py-2 border rounded-md mr-4"
                 />
                 <button
                   onClick={handleAddItem}
-                  disabled={!newItemName.trim() || isProcessing}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-r-md hover:bg-primary-700 disabled:opacity-70 flex items-center"
+                  disabled={isProcessing || !newItemName.trim()}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
-                  <Add className="mr-1" />
+                  <Add className="mr-2" />
                   Adicionar
                 </button>
               </div>
 
-              <div className="bg-gray-50 rounded-md border">
-                <ul className="divide-y divide-gray-200">
-                  {getActiveItems().length === 0 ? (
-                    <li className="p-4 text-gray-500 text-center">
-                      Nenhum item cadastrado
-                    </li>
-                  ) : (
-                    getActiveItems().map(item => (
-                      <li key={item.id} className="p-3 flex items-center justify-between">
-                        {editingItem === item.id ? (
-                          <div className="flex-1 flex items-center space-x-2">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Nome
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {getActiveItems().map((item) => (
+                      <tr key={item.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {editingItem === item.id ? (
                             <input
                               type="text"
                               value={itemName}
                               onChange={(e) => setItemName(e.target.value)}
-                              className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                              className="w-full px-3 py-1 border rounded-md"
                             />
-                            <button
-                              onClick={handleSaveEdit}
-                              disabled={!itemName.trim() || isProcessing}
-                              className="text-green-600 hover:text-green-800 disabled:opacity-50"
-                            >
-                              <Save />
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              disabled={isProcessing}
-                              className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                            >
-                              <Cancel />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-gray-800">{item.name}</span>
-                            <div className="flex space-x-1">
+                          ) : (
+                            item.name
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {editingItem === item.id ? (
+                            <>
+                              <button
+                                onClick={handleSaveEdit}
+                                className="text-green-600 hover:text-green-900 mr-3"
+                              >
+                                <Save />
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                <Cancel />
+                              </button>
+                            </>
+                          ) : (
+                            <>
                               <button
                                 onClick={() => handleEditItem(item)}
-                                disabled={isProcessing}
-                                className="text-blue-600 hover:text-blue-800 disabled:opacity-50 p-1"
+                                className="text-blue-600 hover:text-blue-900 mr-3"
                               >
-                                <Edit fontSize="small" />
+                                <Edit />
                               </button>
                               <button
                                 onClick={() => handleDeleteItem(item.id)}
-                                disabled={isProcessing}
-                                className="text-red-600 hover:text-red-800 disabled:opacity-50 p-1"
+                                className="text-red-600 hover:text-red-900"
                               >
-                                <Delete fontSize="small" />
+                                <Delete />
                               </button>
-                            </div>
-                          </>
-                        )}
-                      </li>
-                    ))
-                  )}
-                </ul>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            
-            <div className="text-sm text-gray-500 mt-8">
-              <p>Estes parâmetros são utilizados no preenchimento dos perfis dos integrantes.</p>
-              <p>Alterar estes valores não afeta os perfis existentes.</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </AppLayout>
