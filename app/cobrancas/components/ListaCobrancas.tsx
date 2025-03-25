@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Edit, CheckCircle, Delete, Close, KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
+import { Search, Edit, CheckCircle, Delete, Close, KeyboardArrowDown, KeyboardArrowUp, WhatsApp } from '@mui/icons-material';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/database.types';
 import ModalRegistrarPagamento from './ModalRegistrarPagamento';
+import ModalEnviarMensagemWhatsApp from './ModalEnviarMensagemWhatsApp';
+import { Tooltip, IconButton } from '@mui/material';
+import { WhatsAppService } from '@/services/whatsapp';
 import React from 'react';
 
 interface Cobranca {
@@ -18,6 +21,7 @@ interface Cobranca {
   mesVencimento: number;
   anoVencimento: number;
   emAtraso: boolean;
+  whatsapp_number?: string | null;
 }
 
 interface Integrante {
@@ -64,6 +68,11 @@ export default function ListaCobrancas({
   const [modalConfirmacaoAberto, setModalConfirmacaoAberto] = useState(false);
   const [cobrancaParaExcluir, setCobrancaParaExcluir] = useState<{id: string, cobrancaId: string} | null>(null);
   const [gruposExpandidos, setGruposExpandidos] = useState<Record<string, boolean>>({});
+  const [cobrancaSelecionadaWhatsApp, setCobrancaSelecionadaWhatsApp] = useState<Cobranca | null>(null);
+  const [modalWhatsAppAberto, setModalWhatsAppAberto] = useState(false);
+  const [whatsappEnviado, setWhatsappEnviado] = useState<Set<string>>(new Set());
+  
+  const whatsappService = new WhatsAppService();
   
   // Filtrar cobranças usando useMemo para evitar recálculos desnecessários
   const cobrancasFiltradas = useMemo(() => {
@@ -179,6 +188,46 @@ export default function ListaCobrancas({
     setModalConfirmacaoAberto(false);
     setCobrancaParaExcluir(null);
   };
+
+  const handleEnviarWhatsApp = async (cobranca: Cobranca) => {
+    const cobrancaComWhatsApp = {
+      ...cobranca,
+      whatsapp_number: null // Será buscado do perfil
+    };
+    setCobrancaSelecionadaWhatsApp(cobrancaComWhatsApp);
+    setModalWhatsAppAberto(true);
+  };
+
+  const handleConfirmarEnvioWhatsApp = async (mensagem: string) => {
+    if (!cobrancaSelecionadaWhatsApp) return;
+
+    try {
+      // Buscar o whatsapp_number do integrante
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('whatsapp_number')
+        .eq('id', cobrancaSelecionadaWhatsApp.integranteId)
+        .single();
+
+      if (error) throw error;
+
+      const whatsapp_number = data?.whatsapp_number;
+      if (whatsapp_number) {
+        await whatsappService.sendTestMessage(
+          whatsapp_number,
+          mensagem
+        );
+        
+        // Marcar como enviado
+        setWhatsappEnviado(new Set([...Array.from(whatsappEnviado), cobrancaSelecionadaWhatsApp.id]));
+      } else {
+        throw new Error('Número de WhatsApp não encontrado');
+      }
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      throw error;
+    }
+  };
   
   return (
     <div>
@@ -250,6 +299,9 @@ export default function ListaCobrancas({
                   Status
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Notificação
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
@@ -296,6 +348,9 @@ export default function ListaCobrancas({
                           {grupo.status}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {/* Coluna vazia para manter alinhamento */}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {/* Não há ações para o grupo, apenas para as cobranças individuais */}
                       </td>
@@ -327,6 +382,28 @@ export default function ListaCobrancas({
                                 ? 'Em Atraso' 
                                 : 'Pendente'}
                           </span>
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <Tooltip title={
+                            whatsappEnviado.has(cobranca.id)
+                              ? "Mensagem já enviada"
+                              : cobranca.status !== 'Pendente'
+                              ? "Disponível apenas para cobranças pendentes"
+                              : "Enviar notificação para WhatsApp"
+                          }>
+                            <span>
+                              <IconButton
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEnviarWhatsApp(cobranca);
+                                }}
+                                disabled={cobranca.status !== 'Pendente' || whatsappEnviado.has(cobranca.id)}
+                                color={whatsappEnviado.has(cobranca.id) ? "success" : "default"}
+                              >
+                                <WhatsApp />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
@@ -443,6 +520,18 @@ export default function ListaCobrancas({
           cobrancaId={cobrancaSelecionada}
           supabase={supabase}
           onSuccess={handleRegistroPagamentoSucesso}
+        />
+      )}
+
+      {cobrancaSelecionadaWhatsApp && (
+        <ModalEnviarMensagemWhatsApp
+          open={modalWhatsAppAberto}
+          onClose={() => {
+            setModalWhatsAppAberto(false);
+            setCobrancaSelecionadaWhatsApp(null);
+          }}
+          cobranca={cobrancaSelecionadaWhatsApp}
+          onConfirm={handleConfirmarEnvioWhatsApp}
         />
       )}
     </div>
