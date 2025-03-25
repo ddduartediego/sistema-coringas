@@ -12,7 +12,7 @@ interface ConfigItem {
   name: string;
 }
 
-type ConfigType = 'status' | 'roles' | 'whatsapp';
+type ConfigType = 'whatsapp' | 'roles' | 'status';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -214,6 +214,16 @@ export default function SettingsPage() {
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex space-x-4 mb-6">
+          <button
+              onClick={() => setActiveTab('whatsapp')}
+              className={`px-4 py-2 rounded-md ${
+                activeTab === 'whatsapp'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              WhatsApp
+            </button>
             <button
               onClick={() => setActiveTab('status')}
               className={`px-4 py-2 rounded-md ${
@@ -234,18 +244,7 @@ export default function SettingsPage() {
             >
               Funções
             </button>
-            <button
-              onClick={() => setActiveTab('whatsapp')}
-              className={`px-4 py-2 rounded-md ${
-                activeTab === 'whatsapp'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              WhatsApp
-            </button>
           </div>
-
           {message && (
             <div
               className={`mb-4 p-4 rounded-md ${

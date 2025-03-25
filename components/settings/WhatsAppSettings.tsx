@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Button, CircularProgress, Paper, Alert, TextField } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Paper, Alert, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { WhatsApp, Warning, PowerSettingsNew, Send } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { WhatsAppService } from '@/services/whatsapp';
+import { ProfileService } from '@/services/profiles';
 
 const whatsappService = new WhatsAppService();
 const QR_CODE_EXPIRATION = 90000; // 1.5 minutos em milissegundos
@@ -15,6 +16,12 @@ interface WhatsAppResponse {
   status: string;
   qrcode?: string;
   lastUpdate?: string;
+}
+
+interface Profile {
+  id: string;
+  name: string;
+  whatsapp_number: string;
 }
 
 export default function WhatsAppSettings() {
@@ -30,12 +37,17 @@ export default function WhatsAppSettings() {
   const [messageSent, setMessageSent] = useState(false);
   const [generatingQR, setGeneratingQR] = useState(false);
   const [qrCodeExpiresAt, setQrCodeExpiresAt] = useState<Date | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
   
   const pollTimer = useRef<NodeJS.Timeout | null>(null);
   const qrCodeTimer = useRef<NodeJS.Timeout | null>(null);
+  const profileService = new ProfileService();
 
   useEffect(() => {
     loadStatus();
+    loadProfiles();
     return () => {
       stopPolling();
     };
@@ -76,6 +88,19 @@ export default function WhatsAppSettings() {
       setLoading(false);
     }
   }, [status]);
+
+  const loadProfiles = async () => {
+    try {
+      setLoadingProfiles(true);
+      const data = await profileService.getProfilesWithWhatsApp();
+      setProfiles(data);
+    } catch (error) {
+      console.error('Erro ao carregar perfis:', error);
+      setError('Erro ao carregar lista de integrantes');
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
 
   const handleConnect = async () => {
     try {
@@ -203,22 +228,19 @@ export default function WhatsAppSettings() {
       setSendingMessage(true);
       setError(null);
       setMessageSent(false);
-      
-      // Validação do número de telefone
-      if (!validatePhoneNumber(testPhone)) {
-        throw new Error('Número de telefone inválido. Digite o número com código do país e DDD (ex: 5511999999999)');
+
+      const selectedProfile = profiles.find(p => p.id === selectedProfileId);
+      if (!selectedProfile) {
+        throw new Error('Selecione um integrante');
       }
 
       if (!testMessage.trim()) {
         throw new Error('A mensagem não pode estar vazia');
       }
 
-      // Remove caracteres não numéricos do telefone
-      const cleanPhone = testPhone.replace(/\D/g, '');
-
-      await whatsappService.sendTestMessage(cleanPhone, testMessage.trim());
+      await whatsappService.sendTestMessage(selectedProfile.whatsapp_number, testMessage.trim());
       setMessageSent(true);
-      setTestPhone('');
+      setSelectedProfileId('');
       setTestMessage('');
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -350,15 +372,28 @@ export default function WhatsAppSettings() {
             Enviar Mensagem de Teste
           </Typography>
           <Box display="flex" flexDirection="column" gap={2}>
-            <TextField
-              label="Número do Telefone"
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              placeholder="5511999999999"
-              helperText="Digite o número com código do país (55) e DDD, sem espaços ou caracteres especiais"
-              error={testPhone.length > 0 && !validatePhoneNumber(testPhone)}
-              disabled={sendingMessage}
-            />
+            <FormControl fullWidth>
+              <InputLabel id="profile-select-label">Selecione o Integrante</InputLabel>
+              <Select
+                labelId="profile-select-label"
+                value={selectedProfileId}
+                onChange={(e) => setSelectedProfileId(e.target.value as string)}
+                disabled={sendingMessage || loadingProfiles}
+                label="Selecione o Integrante"
+              >
+                {loadingProfiles ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} /> Carregando...
+                  </MenuItem>
+                ) : (
+                  profiles.map((profile) => (
+                    <MenuItem key={profile.id} value={profile.id}>
+                      {profile.name} ({profile.whatsapp_number})
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
             <TextField
               label="Mensagem"
               value={testMessage}
@@ -374,7 +409,7 @@ export default function WhatsAppSettings() {
               color="primary"
               startIcon={sendingMessage ? <CircularProgress size={20} color="inherit" /> : <Send />}
               onClick={handleSendTestMessage}
-              disabled={sendingMessage || !validatePhoneNumber(testPhone) || !testMessage.trim()}
+              disabled={sendingMessage || !selectedProfileId || !testMessage.trim()}
             >
               {sendingMessage ? 'Enviando...' : 'Enviar Mensagem'}
             </Button>
