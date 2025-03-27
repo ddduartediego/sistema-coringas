@@ -15,7 +15,9 @@ import {
   EyeOff, 
   MoreHorizontal,
   Check, 
-  X 
+  X,
+  FileText,
+  Upload
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -69,6 +71,7 @@ interface Quest {
   updated_at: string;
   numero: number | null;
   visivel: boolean;
+  arquivo_pdf?: string | null;
 }
 
 interface QuestsAdminClientProps {
@@ -93,8 +96,13 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     visivel: false,
     data_inicio: '',
     data_fim: '',
-    status: 'pendente'
+    status: 'pendente',
+    arquivo_pdf: null as string | null
   });
+  
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   
   const router = useRouter();
   const { toast } = useToast();
@@ -142,7 +150,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       visivel: false,
       data_inicio: '',
       data_fim: '',
-      status: 'pendente'
+      status: 'pendente',
+      arquivo_pdf: null
     });
     setModalMode('create');
     setShowModal(true);
@@ -158,7 +167,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       visivel: quest.visivel,
       data_inicio: quest.data_inicio ? formatarDataInput(quest.data_inicio) : '',
       data_fim: quest.data_fim ? formatarDataInput(quest.data_fim) : '',
-      status: quest.status
+      status: quest.status,
+      arquivo_pdf: quest.arquivo_pdf
     });
     setModalMode('edit');
     setShowModal(true);
@@ -240,7 +250,85 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     }
   };
   
-  // Salvar quest (criar ou editar)
+  // Resetar formulário
+  const resetForm = () => {
+    setFormData({
+      titulo: '',
+      descricao: '',
+      numero: '',
+      visivel: false,
+      data_inicio: '',
+      data_fim: '',
+      status: 'pendente',
+      arquivo_pdf: null
+    });
+    setPdfFile(null);
+    setUploadProgress(0);
+  };
+  
+  // Função para lidar com o upload do arquivo PDF
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.type === 'application/pdf') {
+        setPdfFile(file);
+      } else {
+        toast({
+          title: "Formato inválido",
+          description: "Por favor, selecione apenas arquivos PDF.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  
+  // Função para fazer upload do arquivo para o Storage do Supabase
+  const uploadPdfToStorage = async (file: File, questId: string): Promise<string | null> => {
+    try {
+      setIsUploading(true);
+      
+      // Criar um nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${questId}_${Date.now()}.${fileExt}`;
+      const filePath = `quests/${game.id}/${fileName}`;
+      
+      // Upload do arquivo
+      const { data, error } = await supabase.storage
+        .from('quest-pdfs')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          onUploadProgress: (progress) => {
+            const percentProgress = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percentProgress);
+          }
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Obter URL pública do arquivo
+      const { data: publicUrlData } = supabase.storage
+        .from('quest-pdfs')
+        .getPublicUrl(filePath);
+      
+      return publicUrlData.publicUrl;
+    } catch (error) {
+      console.error('Erro ao fazer upload do PDF:', error);
+      toast({
+        title: "Erro ao fazer upload",
+        description: "Não foi possível enviar o arquivo PDF.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+  
+  // Modificar a função handleSaveQuest para incluir o upload do PDF
   const handleSaveQuest = async () => {
     try {
       setIsLoading(true);
@@ -255,6 +343,16 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         return;
       }
       
+      let pdfUrl = formData.arquivo_pdf;
+      
+      // Processar upload de PDF se um novo arquivo foi selecionado
+      if (pdfFile) {
+        // Para edição, precisamos do ID da quest; para criação, vamos fazer upload após criar
+        if (modalMode === 'edit' && selectedQuest) {
+          pdfUrl = await uploadPdfToStorage(pdfFile, selectedQuest.id);
+        }
+      }
+      
       const questData: Partial<Quest> = {
         titulo: formData.titulo,
         descricao: formData.descricao,
@@ -264,6 +362,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_fim: formData.data_fim || null,
         status: formData.status,
         game_id: game.id,
+        arquivo_pdf: pdfUrl
       };
       
       if (modalMode === 'create') {
@@ -275,6 +374,26 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
           .single();
         
         if (questError) throw questError;
+        
+        // Agora que temos o ID da quest, podemos fazer upload do PDF
+        if (pdfFile && novaQuest) {
+          const pdfUrl = await uploadPdfToStorage(pdfFile, novaQuest.id);
+          
+          // Atualizar a quest com a URL do PDF
+          if (pdfUrl) {
+            const { error: updateError } = await supabase
+              .from('quests')
+              .update({ arquivo_pdf: pdfUrl })
+              .eq('id', novaQuest.id);
+              
+            if (updateError) {
+              console.error('Erro ao atualizar a URL do PDF:', updateError);
+            } else {
+              // Atualizar o objeto local com a URL do PDF
+              novaQuest.arquivo_pdf = pdfUrl;
+            }
+          }
+        }
         
         // Buscar todas as equipes do game
         const { data: equipes, error: equipesError } = await supabase
@@ -308,33 +427,36 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         });
       } else if (modalMode === 'edit' && selectedQuest) {
         // Editar quest existente
-        const { data, error } = await supabase
+        const { error: updateError } = await supabase
           .from('quests')
           .update(questData)
-          .eq('id', selectedQuest.id)
-          .select()
-          .single();
+          .eq('id', selectedQuest.id);
         
-        if (error) throw error;
+        if (updateError) throw updateError;
         
-        // Atualizar na lista local
+        // Atualizar a lista local
         setQuestsList(prevQuests => 
-          prevQuests.map(q => q.id === selectedQuest.id ? data as Quest : q)
+          prevQuests.map(q => 
+            q.id === selectedQuest.id 
+              ? { ...q, ...questData } as Quest
+              : q
+          )
         );
         
         toast({
           title: "Quest atualizada",
-          description: `A quest "${data.titulo}" foi atualizada com sucesso.`,
+          description: "Quest atualizada com sucesso!",
         });
       }
       
-      // Fechar modal
+      // Fechar o modal e resetar o formulário
       setShowModal(false);
+      resetForm();
     } catch (error: any) {
       console.error('Erro ao salvar quest:', error);
       toast({
         title: "Erro ao salvar",
-        description: error.message || "Não foi possível salvar a quest.",
+        description: error.message || "Ocorreu um erro ao salvar a quest.",
         variant: "destructive",
       });
     } finally {
@@ -558,6 +680,60 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                   </p>
                 </div>
                 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Arquivo PDF (opcional)
+                  </label>
+                  <div className="mt-1 flex items-center">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label
+                      htmlFor="pdf-upload"
+                      className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {pdfFile ? 'Alterar PDF' : 'Selecionar PDF'}
+                    </label>
+                    
+                    {(pdfFile || formData.arquivo_pdf) && (
+                      <div className="ml-3 text-sm text-gray-500 flex items-center">
+                        <FileText className="h-4 w-4 mr-1 text-blue-500" />
+                        <span className="truncate max-w-xs">
+                          {pdfFile ? pdfFile.name : formData.arquivo_pdf?.split('/').pop() || 'Arquivo PDF'}
+                        </span>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            setPdfFile(null);
+                            setFormData({...formData, arquivo_pdf: null});
+                          }}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {isUploading && (
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Enviando: {uploadProgress}%</p>
+                    </div>
+                  )}
+                  
+                  <p className="mt-1 text-sm text-gray-500">
+                    Adicione um documento PDF com informações complementares para esta quest.
+                  </p>
+                </div>
+                
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
@@ -769,6 +945,12 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
+                    {quest.arquivo_pdf && (
+                      <DropdownMenuItem onClick={() => window.open(quest.arquivo_pdf!, '_blank')}>
+                        <FileText className="mr-2 h-4 w-4 text-blue-600" />
+                        Ver PDF
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem 
                       onClick={() => handleOpenDeleteModal(quest)}
                       className="text-red-600 focus:text-red-700"

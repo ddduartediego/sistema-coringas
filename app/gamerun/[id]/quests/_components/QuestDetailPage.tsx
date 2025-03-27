@@ -13,7 +13,9 @@ import {
   AwardIcon, 
   Flag,
   BookOpen,
-  Bookmark
+  Bookmark,
+  FileText,
+  Download
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +42,7 @@ interface Quest {
   updated_at: string | null;
   numero: number | null;
   visivel: boolean;
+  arquivo_pdf?: string | null;
 }
 
 interface Equipe {
@@ -196,6 +199,38 @@ export default function QuestDetailPage({
                 <p className="text-gray-500 italic">Sem descrição detalhada</p>
               )}
             </div>
+            
+            {/* PDF */}
+            {quest.arquivo_pdf && (
+              <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-center mb-2">
+                  <FileText className="h-5 w-5 text-blue-600 mr-2" />
+                  <h3 className="font-semibold text-blue-800">Documento Complementar</h3>
+                </div>
+                <p className="text-sm text-blue-700 mb-3">
+                  Esta quest possui um documento PDF com informações adicionais.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    onClick={() => window.open(quest.arquivo_pdf!, '_blank')}
+                    variant="outline"
+                    className="bg-white"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Visualizar PDF
+                  </Button>
+                  
+                  <a 
+                    href={quest.arquivo_pdf!}
+                    download={`quest_${quest.id}_documento.pdf`}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar PDF
+                  </a>
+                </div>
+              </div>
+            )}
             
             {/* Informações adicionais */}
             {equipe && questProgress?.status === 'concluida' && (
