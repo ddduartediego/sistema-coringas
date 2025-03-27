@@ -146,7 +146,7 @@ export default async function QuestsPage({
         console.log("QuestsPage: Usuário não pertence a nenhuma equipe ativa neste jogo");
         return (
           <div className="container mx-auto py-10">
-            <h1 className="text-2xl font-bold mb-4">Missões do Game</h1>
+            <h1 className="text-2xl font-bold mb-4">Quests do Game</h1>
             <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 text-yellow-800">
               <h2 className="font-semibold text-lg mb-2">Você não está em uma equipe ativa</h2>
               <p>Para acessar as missões do jogo, você precisa fazer parte de uma equipe ativa.</p>
