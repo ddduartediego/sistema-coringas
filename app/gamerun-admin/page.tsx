@@ -99,16 +99,7 @@ export default function GameRunAdminPage() {
         </div>
         
         <div className="flex space-x-4">
-          <button
-            type="button"
-            onClick={carregarGames}
-            className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
-          >
-            <Refresh className="mr-2 h-5 w-5" />
-            Atualizar
-          </button>
-          
-          <button
+                    <button
             type="button"
             onClick={() => abrirModal()}
             className="flex items-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
