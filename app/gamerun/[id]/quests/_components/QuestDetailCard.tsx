@@ -15,6 +15,8 @@ interface Quest {
   tipo: string;
   data_inicio: string | null;
   data_fim: string | null;
+  numero?: number | null;
+  visivel?: boolean;
 }
 
 interface QuestDetailCardProps {
@@ -33,17 +35,26 @@ export default function QuestDetailCard({ quest, renderFooter }: QuestDetailCard
     <Card className="overflow-hidden">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-xl">{quest.titulo}</CardTitle>
+          <CardTitle className="text-xl">
+            {quest.numero && <span className="text-gray-500 mr-1">#{quest.numero}</span>}
+            {quest.titulo}
+          </CardTitle>
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             {quest.pontos} pontos
           </Badge>
         </div>
-        <CardDescription className="line-clamp-2">
-          {quest.descricao}
-        </CardDescription>
       </CardHeader>
-      <CardContent className="pb-2">
-        <div className="flex flex-col space-y-1.5 text-sm text-gray-500">
+      
+      <CardContent>
+        {quest.descricao ? (
+          <div className="prose prose-blue max-w-none mb-6">
+            <div dangerouslySetInnerHTML={{ __html: quest.descricao }} />
+          </div>
+        ) : (
+          <p className="text-gray-500 italic">Sem descrição detalhada</p>
+        )}
+        
+        <div className="flex flex-col space-y-1.5 text-sm text-gray-500 mt-4 pt-4 border-t">
           {quest.data_inicio && (
             <div className="flex items-center">
               <CalendarIcon className="h-4 w-4 mr-2" />

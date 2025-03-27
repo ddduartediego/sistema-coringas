@@ -310,7 +310,15 @@ export default function QuestsClient({
               {/* Conteúdo */}
               <div className="flex flex-1 flex-col px-4 pb-4">
                 {quest.descricao && quest.descricao !== quest.titulo && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{quest.descricao}</p>
+                  <div className="prose prose-sm prose-primary mb-4 max-h-24 overflow-hidden">
+                    <div 
+                      dangerouslySetInnerHTML={{ 
+                        __html: quest.descricao.length > 300 
+                          ? quest.descricao.substring(0, 300) + '...' 
+                          : quest.descricao 
+                      }} 
+                    />
+                  </div>
                 )}
                 
                 <div className="mt-auto space-y-3">
