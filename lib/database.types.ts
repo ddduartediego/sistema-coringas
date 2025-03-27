@@ -302,6 +302,123 @@ export interface Database {
           }
         ]
       }
+      quests: {
+        Row: {
+          id: string
+          game_id: string
+          titulo: string
+          descricao: string
+          pontos: number
+          status: string
+          tipo: string
+          data_inicio: string | null
+          data_fim: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          game_id: string
+          titulo: string
+          descricao: string
+          pontos?: number
+          status?: string
+          tipo?: string
+          data_inicio?: string | null
+          data_fim?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          game_id?: string
+          titulo?: string
+          descricao?: string
+          pontos?: number
+          status?: string
+          tipo?: string
+          data_inicio?: string | null
+          data_fim?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quests_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      equipe_quests: {
+        Row: {
+          id: string
+          equipe_id: string
+          quest_id: string
+          status: string
+          resposta: string | null
+          feedback: string | null
+          avaliacao: number | null
+          avaliado_por: string | null
+          data_inicio: string | null
+          data_completada: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          equipe_id: string
+          quest_id: string
+          status?: string
+          resposta?: string | null
+          feedback?: string | null
+          avaliacao?: number | null
+          avaliado_por?: string | null
+          data_inicio?: string | null
+          data_completada?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          equipe_id?: string
+          quest_id?: string
+          status?: string
+          resposta?: string | null
+          feedback?: string | null
+          avaliacao?: number | null
+          avaliado_por?: string | null
+          data_inicio?: string | null
+          data_completada?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipe_quests_equipe_id_fkey"
+            columns: ["equipe_id"]
+            isOneToOne: false
+            referencedRelation: "game_equipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipe_quests_quest_id_fkey"
+            columns: ["quest_id"]
+            isOneToOne: false
+            referencedRelation: "quests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipe_quests_avaliado_por_fkey"
+            columns: ["avaliado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

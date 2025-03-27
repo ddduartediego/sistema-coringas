@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { SportsEsports, CalendarMonth, Person, PlayArrow } from '@mui/icons-material';
+import Link from 'next/link';
+import { SportsEsports, CalendarMonth, Person, PlayArrow, ListAlt } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AlertaPersonalizado from './AlertaPersonalizado';
@@ -222,6 +223,16 @@ export default function GameCard({
                 <PlayArrow className="mr-1 h-4 w-4" />
                 {loading ? 'Ativando...' : 'Ativar'}
               </button>
+            )}
+            
+            {(status === 'ativo' || status === 'pendente') && (
+              <Link
+                href={`/admin/games/${id}/quests`}
+                className="flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none"
+              >
+                <ListAlt className="mr-1 h-4 w-4" />
+                Quests
+              </Link>
             )}
           </div>
         </div>

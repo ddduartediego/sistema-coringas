@@ -242,7 +242,7 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                               {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                              <div className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</div>
                               {integrante.is_owner && (
                                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                                   Líder
@@ -269,7 +269,7 @@ export default function EquipeViewClient({ equipeId }: EquipeViewClientProps) {
                               {integrante.user?.name?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</p>
+                              <div className="font-medium">{integrante.user?.name || 'Usuário sem nome'}</div>
                               <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
                                 Pendente
                               </Badge>

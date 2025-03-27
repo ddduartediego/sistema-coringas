@@ -185,11 +185,11 @@ export default function GameRunPage() {
                     <span>{calcularTempoRestante(game.data_inicio)}</span>
                   </div>
                   
-                  {/* Botão de Detalhes */}
-                  <div className="flex pt-4">
+                  {/* Botões */}
+                  <div className="flex pt-4 space-x-2">
                     <Link 
                       href={`/gamerun/${game.id}`}
-                      className="w-full flex items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
+                      className="flex flex-1 items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
                     >
                       <span className="inline-block mr-2 h-4 w-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -198,6 +198,17 @@ export default function GameRunPage() {
                         </svg>
                       </span>
                       Ver Detalhes
+                    </Link>
+                    <Link 
+                      href={`/gamerun/${game.id}/quests`}
+                      className="flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none"
+                    >
+                      <span className="inline-block mr-2 h-4 w-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
+                        </svg>
+                      </span>
+                      Entrar
                     </Link>
                   </div>
                 </div>
