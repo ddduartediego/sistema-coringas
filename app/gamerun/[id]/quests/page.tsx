@@ -97,7 +97,7 @@ export default async function QuestsPage({
         .select("equipe_id, status")
         .eq("integrante_id", profile.id);
 
-      console.log("QuestsPage: Todas integrações do usuário:", todasIntegracoes || "Nenhuma");
+      
       if (integracoesError) {
         console.error("QuestsPage: Erro ao buscar todas integrações:", integracoesError);
       }
@@ -108,9 +108,9 @@ export default async function QuestsPage({
         .select("id, nome, status")
         .eq("game_id", gameId);
 
-      console.log("QuestsPage: Todas equipes do game:", todasEquipesGame || "Nenhuma");
+      
       if (equipesGameError) {
-        console.error("QuestsPage: Erro ao buscar todas equipes do game:", equipesGameError);
+        
       }
 
       // Buscar a interseção - equipes do game que o usuário participa
@@ -125,15 +125,7 @@ export default async function QuestsPage({
         console.error("QuestsPage: Erro ao buscar equipes:", equipeError);
       }
 
-      console.log("QuestsPage: Equipes encontradas detalhadas:", 
-        userEquipes?.map(eq => ({
-          equipe_id: eq.equipe_id,
-          status_integrante: eq.status,
-          equipe: eq.game_equipes
-        })) || "Nenhuma"
-      );
-
-      // Filtrar apenas equipes ativas localmente
+            // Filtrar apenas equipes ativas localmente
       const equipesAtivas = userEquipes?.filter(eq => 
         eq.game_equipes?.game_id === gameId && 
         eq.game_equipes?.status === "ativa" &&
@@ -148,12 +140,12 @@ export default async function QuestsPage({
           <div className="container mx-auto py-10">
             <h1 className="text-2xl font-bold mb-4">Quests do Game</h1>
             <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 text-yellow-800">
-              <h2 className="font-semibold text-lg mb-2">Você não está em uma equipe ativa</h2>
-              <p>Para acessar as missões do jogo, você precisa fazer parte de uma equipe ativa.</p>
-              <p className="mt-2 text-sm">Status da sua participação: 
+              <h2 className="font-semibold text-lg mb-2">Status da sua participação</h2>
+              <p>Para acessar as quests do jogo, você precisa estar aprovado em uma equipe ativa.</p>
+              <p className="mt-2 text-sm"> 
                 {userEquipes?.length 
-                  ? `Você pertence a equipes neste jogo, mas nenhuma está ativa.` 
-                  : `Você não pertence a nenhuma equipe neste jogo.`}
+                  ? `Você pertence a uma equipes neste jogo, mas não está ativa.` 
+                  : `Você não pertence a uma equipe neste jogo.`}
               </p>
             </div>
           </div>
@@ -162,7 +154,7 @@ export default async function QuestsPage({
       
       // Obter a equipe do usuário
       const equipe = equipesAtivas[0].game_equipes;
-      console.log("QuestsPage: Equipe obtida:", equipe);
+      
       
       // Buscar quests disponíveis para este game
       console.log("QuestsPage: Buscando quests do game");
