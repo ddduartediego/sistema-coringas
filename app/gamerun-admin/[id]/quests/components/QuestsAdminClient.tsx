@@ -68,6 +68,7 @@ interface Quest {
   updated_at: string;
   numero: number | null;
   visivel: boolean;
+  arquivo_pdf: string | null;
 }
 
 interface QuestsAdminClientProps {
@@ -92,7 +93,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     visivel: false,
     data_inicio: '',
     data_fim: '',
-    status: 'pendente'
+    status: 'pendente',
+    arquivo_pdf: null as string | null
   });
   
   const router = useRouter();
@@ -141,7 +143,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       visivel: false,
       data_inicio: '',
       data_fim: '',
-      status: 'pendente'
+      status: 'pendente',
+      arquivo_pdf: null
     });
     setModalMode('create');
     setShowModal(true);
@@ -157,7 +160,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       visivel: quest.visivel,
       data_inicio: quest.data_inicio ? formatarDataInput(quest.data_inicio) : '',
       data_fim: quest.data_fim ? formatarDataInput(quest.data_fim) : '',
-      status: quest.status
+      status: quest.status,
+      arquivo_pdf: quest.arquivo_pdf
     });
     setModalMode('edit');
     setShowModal(true);
@@ -263,6 +267,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_fim: formData.data_fim || null,
         status: formData.status,
         game_id: game.id,
+        arquivo_pdf: formData.arquivo_pdf
       };
       
       if (modalMode === 'create') {
@@ -382,6 +387,98 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   // Alterar a navegação de volta para o gamerun-admin em vez de admin/games
   const handleBackToGames = () => {
     router.push(`/gamerun-admin/${game.id}`);
+  };
+  
+  // Função para fazer upload do arquivo para o Storage do Supabase
+  const uploadPdfToStorage = async (file: File, questId: string): Promise<string | null> => {
+    try {
+      setIsLoading(true);
+      
+      // Verificar se o bucket existe
+      const { data: buckets, error: bucketsError } = await supabase
+        .storage
+        .listBuckets();
+      
+      if (bucketsError) {
+        console.error('Erro ao listar buckets:', bucketsError);
+        throw new Error('Não foi possível acessar o Storage do Supabase');
+      }
+      
+      const questPdfsBucket = buckets.find(b => b.name === 'quest-pdfs');
+      
+      if (!questPdfsBucket) {
+        throw new Error('Bucket quest-pdfs não encontrado. Por favor, crie o bucket no Supabase Studio');
+      }
+      
+      console.log('Bucket encontrado:', questPdfsBucket);
+      
+      // Verificar a sessão atual para garantir que o usuário está autenticado
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session) {
+        throw new Error('Você precisa estar autenticado para fazer upload de arquivos');
+      }
+      
+      // Criar um nome único para o arquivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${questId}_${Date.now()}.${fileExt}`;
+      const filePath = `${game.id}/${fileName}`;
+      
+      console.log('Tentando fazer upload para:', filePath, 'como usuário autenticado');
+      
+      // Upload do arquivo com retry
+      let uploadAttempts = 0;
+      const maxAttempts = 3;
+      let uploadResult = null;
+      
+      while (uploadAttempts < maxAttempts) {
+        uploadAttempts++;
+        
+        try {
+          const { data, error } = await supabase.storage
+            .from('quest-pdfs')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
+            
+          if (error) {
+            console.error(`Tentativa ${uploadAttempts}/${maxAttempts} falhou:`, error);
+            if (uploadAttempts === maxAttempts) throw error;
+            // Esperar 1 segundo antes de tentar novamente
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            uploadResult = data;
+            break;
+          }
+        } catch (err) {
+          console.error(`Exceção na tentativa ${uploadAttempts}/${maxAttempts}:`, err);
+          if (uploadAttempts === maxAttempts) throw err;
+        }
+      }
+      
+      if (!uploadResult) {
+        throw new Error('Todas as tentativas de upload falharam');
+      }
+      
+      console.log('Upload bem-sucedido:', uploadResult);
+      
+      // Obter URL pública do arquivo
+      const { data: publicUrlData } = supabase.storage
+        .from('quest-pdfs')
+        .getPublicUrl(filePath);
+      
+      return publicUrlData.publicUrl;
+    } catch (error: any) {
+      console.error('Erro ao fazer upload do PDF:', error?.message || JSON.stringify(error));
+      toast({
+        title: "Erro ao fazer upload",
+        description: error?.message || "Não foi possível enviar o arquivo PDF. Verifique as permissões do bucket.",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (

@@ -315,6 +315,9 @@ export interface Database {
           data_fim: string | null
           created_at: string | null
           updated_at: string | null
+          numero: number | null
+          visivel: boolean
+          arquivo_pdf: string | null
         }
         Insert: {
           id?: string
@@ -328,6 +331,9 @@ export interface Database {
           data_fim?: string | null
           created_at?: string | null
           updated_at?: string | null
+          numero?: number | null
+          visivel?: boolean
+          arquivo_pdf?: string | null
         }
         Update: {
           id?: string
@@ -341,6 +347,9 @@ export interface Database {
           data_fim?: string | null
           created_at?: string | null
           updated_at?: string | null
+          numero?: number | null
+          visivel?: boolean
+          arquivo_pdf?: string | null
         }
         Relationships: [
           {

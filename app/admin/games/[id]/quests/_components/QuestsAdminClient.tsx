@@ -287,26 +287,45 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     try {
       setIsUploading(true);
       
+      // Verificar se o bucket existe
+      const { data: buckets, error: bucketsError } = await supabase
+        .storage
+        .listBuckets();
+      
+      if (bucketsError) {
+        console.error('Erro ao listar buckets:', bucketsError);
+        throw new Error('Não foi possível acessar o Storage do Supabase');
+      }
+      
+      const questPdfsBucket = buckets.find(b => b.name === 'quest-pdfs');
+      
+      if (!questPdfsBucket) {
+        throw new Error('Bucket quest-pdfs não encontrado. Por favor, crie o bucket no Supabase Studio');
+      }
+      
+      console.log('Bucket encontrado:', questPdfsBucket);
+      
       // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${questId}_${Date.now()}.${fileExt}`;
-      const filePath = `quests/${game.id}/${fileName}`;
+      const filePath = `${game.id}/${fileName}`;
+      
+      console.log('Tentando fazer upload para:', filePath);
       
       // Upload do arquivo
       const { data, error } = await supabase.storage
         .from('quest-pdfs')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            const percentProgress = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percentProgress);
-          }
+          upsert: true
         });
       
       if (error) {
+        console.error('Erro detalhado do upload:', JSON.stringify(error));
         throw error;
       }
+      
+      console.log('Upload bem-sucedido:', data);
       
       // Obter URL pública do arquivo
       const { data: publicUrlData } = supabase.storage
@@ -314,11 +333,11 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         .getPublicUrl(filePath);
       
       return publicUrlData.publicUrl;
-    } catch (error) {
-      console.error('Erro ao fazer upload do PDF:', error);
+    } catch (error: any) {
+      console.error('Erro ao fazer upload do PDF:', error?.message || JSON.stringify(error));
       toast({
         title: "Erro ao fazer upload",
-        description: "Não foi possível enviar o arquivo PDF.",
+        description: error?.message || "Não foi possível enviar o arquivo PDF. Verifique as permissões do bucket.",
         variant: "destructive",
       });
       return null;
