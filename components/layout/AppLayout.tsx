@@ -74,7 +74,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-1 bg-gray-50">
       <Sidebar isAdmin={isAdmin} isLeader={isLeader} onCollapse={updateSidebarState} />
       
       <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>

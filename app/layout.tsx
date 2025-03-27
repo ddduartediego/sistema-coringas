@@ -29,13 +29,13 @@ export default function RootLayout({
       <body className="bg-white text-gray-900 antialiased h-screen">
         <AuthManager>
           <div className="h-full flex flex-col">
-            <nav className="w-full border-b border-b-foreground/10 h-16">
+            <nav className="w-full border-b border-b-foreground/10 h-16 flex-shrink-0">
               <div className="w-full flex justify-end items-center h-full p-3 px-5">
                 {!hasEnvVars ? null : <HeaderAuth />}
               </div>
             </nav>
 
-            <div className="flex-1">
+            <div className="flex-1 overflow-auto">
               {children}
             </div>
           </div>
