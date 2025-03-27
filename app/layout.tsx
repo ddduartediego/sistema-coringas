@@ -26,11 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={geistSans.className}>
-      <body className="bg-white text-gray-900 antialiased h-screen">
+      <body className="bg-white text-gray-900 antialiased h-[100dvh]">
         <AuthManager>
           <div className="h-full flex flex-col">
             <nav className="w-full border-b border-b-foreground/10 h-16 flex-shrink-0">
-              <div className="w-full flex justify-end items-center h-full p-3 px-5">
+              <div className="w-full flex justify-end items-center h-full p-3 px-4 md:px-5">
                 {!hasEnvVars ? null : <HeaderAuth />}
               </div>
             </nav>

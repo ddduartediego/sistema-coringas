@@ -60,6 +60,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
     getUserProfile();
   }, [router, supabase]);
 
+  useEffect(() => {
+    // Adicionar log para debug do viewport
+    console.log('Viewport height:', window.innerHeight);
+    console.log('Document height:', document.documentElement.clientHeight);
+    
+    const handleResize = () => {
+      console.log('Resize - Viewport height:', window.innerHeight);
+      console.log('Resize - Document height:', document.documentElement.clientHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Função para atualizar o estado do sidebar
   const updateSidebarState = (collapsed: boolean) => {
     setIsSidebarCollapsed(collapsed);
@@ -74,12 +88,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex flex-1 bg-gray-50">
+    <div className="flex flex-col md:flex-row flex-1 bg-gray-50">
       <Sidebar isAdmin={isAdmin} isLeader={isLeader} onCollapse={updateSidebarState} />
       
       <div className={`flex-1 flex flex-col w-full transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         {/* Main content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
         </main>
       </div>
