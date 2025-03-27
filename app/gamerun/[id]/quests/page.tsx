@@ -134,19 +134,65 @@ export default async function QuestsPage({
 
       console.log("QuestsPage: Equipes ativas filtradas:", equipesAtivas?.length || 0);
 
+      // Se o usuário não tem equipe ativa, mostrar apenas a mensagem informativa
       if (!equipesAtivas || equipesAtivas.length === 0) {
         console.log("QuestsPage: Usuário não pertence a nenhuma equipe ativa neste jogo");
         return (
-          <div className="container mx-auto py-10">
-            <h1 className="text-2xl font-bold mb-4">Quests do Game</h1>
-            <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 text-yellow-800">
-              <h2 className="font-semibold text-lg mb-2">Status da sua participação</h2>
-              <p>Para acessar as quests do jogo, você precisa estar aprovado em uma equipe ativa.</p>
-              <p className="mt-2 text-sm"> 
-                {userEquipes?.length 
-                  ? `Você pertence a uma equipes neste jogo, mas não está ativa.` 
-                  : `Você não pertence a uma equipe neste jogo.`}
-              </p>
+          <div className="container mx-auto py-10 flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="w-full max-w-2xl bg-blue-50 p-8 rounded-lg border border-blue-100 shadow-sm">
+              <div className="flex flex-col items-center text-center mb-6">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-16 w-16 text-blue-500 mb-4" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor" 
+                  strokeWidth={1.5}
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Quests do Game</h1>
+                <div className="w-20 h-1 bg-blue-500 rounded mb-6"></div>
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Status da sua participação</h2>
+                <p className="text-gray-600 mb-3">
+                  Para visualizar e participar das quests do jogo, você precisa estar em uma equipe ativa.
+                </p>
+                <p className="text-gray-600 mb-6 font-medium">
+                  {userEquipes?.length 
+                    ? `Você pertence a uma equipe neste jogo, mas ela não está ativa.` 
+                    : `Você ainda não pertence a uma equipe neste jogo.`}
+                </p>
+                <a 
+                  href={`/gamerun/${gameId}`}
+                  className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-medium rounded-md shadow hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 mr-2" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
+                    />
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+                    />
+                  </svg>
+                  Ver detalhes do Game
+                </a>
+              </div>
             </div>
           </div>
         );
@@ -158,7 +204,7 @@ export default async function QuestsPage({
       
       // Buscar quests disponíveis para este game
       console.log("QuestsPage: Buscando quests do game");
-      const { data: quests, error: questsError } = await supabase
+      const { data: questsData, error: questsError } = await supabase
         .from("quests")
         .select("*")
         .eq("game_id", gameId);
@@ -168,6 +214,13 @@ export default async function QuestsPage({
         throw new Error("Não foi possível carregar as missões disponíveis.");
       }
       
+      // Garantir que todas as quests tenham as propriedades requeridas
+      const quests = questsData?.map(quest => ({
+        ...quest,
+        visivel: quest.visivel !== undefined ? quest.visivel : true,
+        numero: quest.numero !== undefined ? quest.numero : null
+      })) || [];
+      
       console.log("QuestsPage: Quests encontradas:", quests?.length || 0);
       
       return (
@@ -176,7 +229,7 @@ export default async function QuestsPage({
             <QuestsClient 
               gameId={gameId}
               equipe={equipe}
-              quests={quests || []}
+              quests={quests}
               profileId={profile.id}
             />
           </div>
