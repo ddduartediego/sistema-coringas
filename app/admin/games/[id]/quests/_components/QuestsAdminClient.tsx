@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import RichTextEditor from "./RichTextEditor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -688,15 +689,13 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                   <label className="block text-sm font-medium text-gray-700">
                     Descrição
                   </label>
-                  <textarea
-                    placeholder="Descrição da quest"
+                  <RichTextEditor
                     value={formData.descricao}
-                    onChange={(e) => setFormData({...formData, descricao: e.target.value})}
-                    rows={6}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    onChange={(content) => setFormData({...formData, descricao: content})}
+                    placeholder="Descrição da quest"
                   />
                   <p className="mt-1 text-sm text-gray-500">
-                    Descreva os detalhes da quest.
+                    Você pode formatar o texto e adicionar elementos como tabelas, links e imagens.
                   </p>
                 </div>
                 
