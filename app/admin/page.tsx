@@ -297,17 +297,54 @@ export default function AdminPage() {
     try {
       setProcessingUser(userId);
       setMessage(null);
+      
+      console.log('Iniciando processo de rejeição para o usuário ID:', userId);
 
-      const { error } = await supabase
+      // Primeiro, obter o user_id associado ao perfil
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .update({ is_approved: false })
-        .eq('id', userId);
+        .select('user_id, email')
+        .eq('id', userId)
+        .single();
 
-      if (error) throw error;
+      if (profileError) {
+        console.error('Erro ao buscar o perfil do usuário:', profileError);
+        throw profileError;
+      }
+      
+      console.log('Dados do perfil recuperados:', profileData);
+      
+      if (!profileData || !profileData.user_id) {
+        console.error('ID de autenticação não encontrado para o perfil:', userId);
+        throw new Error('Não foi possível encontrar o ID de autenticação do usuário');
+      }
+
+      console.log('Tentando excluir o usuário com ID de autenticação:', profileData.user_id);
+
+      // Chamar a API serverless para excluir o usuário
+      const response = await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auth_id: profileData.user_id
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Erro na resposta da API:', result);
+        throw new Error(result.error || 'Erro ao excluir usuário');
+      }
+      
+      console.log('Resposta da API de exclusão:', result);
 
       // Remover das listas
       const userToRemove = [...pendingUsers, ...approvedUsers].find(user => user.id === userId);
       if (userToRemove) {
+        console.log('Removendo usuário das listas de interface:', userToRemove.email);
         if (userToRemove.is_approved) {
           // Atualizar contagem de status se o usuário removido tiver um status
           if (userToRemove.status) {
@@ -342,13 +379,25 @@ export default function AdminPage() {
 
       setMessage({
         type: 'success',
-        text: 'Usuário rejeitado com sucesso!'
+        text: 'Usuário rejeitado e excluído com sucesso!'
       });
     } catch (error: any) {
       console.error('Erro ao processar usuário:', error);
+      let errorMessage = 'Erro ao processar usuário';
+      
+      if (error.message) {
+        if (error.message.includes('service_role')) {
+          errorMessage = 'Erro de permissão: a chave service_role é necessária para esta operação';
+        } else if (error.message.includes('not found')) {
+          errorMessage = 'Usuário não encontrado na base de autenticação';
+        } else {
+          errorMessage = `${errorMessage}: ${error.message}`;
+        }
+      }
+      
       setMessage({
         type: 'error',
-        text: `Erro ao processar usuário: ${error.message}`
+        text: errorMessage
       });
     } finally {
       setProcessingUser(null);
