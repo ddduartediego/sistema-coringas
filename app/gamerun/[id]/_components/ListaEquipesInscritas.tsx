@@ -22,18 +22,19 @@ interface Equipe {
 interface ListaEquipesInscritasProps {
   gameId: string;
   onParticipacaoSolicitada?: () => void;
+  quantidadeMaximaIntegrantes?: number;
 }
 
-export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada }: ListaEquipesInscritasProps) {
+export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada, quantidadeMaximaIntegrantes }: ListaEquipesInscritasProps) {
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mostrarPendentes, setMostrarPendentes] = useState(true);
-  const [mostrarAtivas, setMostrarAtivas] = useState(true);
+  const [mostrarCompletas, setMostrarCompletas] = useState(true);
+  const [mostrarDisponiveis, setMostrarDisponiveis] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [perfilId, setPerfilId] = useState<string | null>(null);
   const [jaInscrito, setJaInscrito] = useState(false);
   const [solicitando, setSolicitando] = useState(false);
-  const [equipeSolicitada, setEquipeSolicitada] = useState<string | null>(null);
+  const [equipeSolicitada, setEquipeSolicitada] = useState<string>("");
   const [dialogAberto, setDialogAberto] = useState(false);
   const [equipeNomeSolicitada, setEquipeNomeSolicitada] = useState("");
   const { toast } = useToast();
@@ -186,7 +187,7 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
           const { data: participacoes, error: participacoesError } = await supabase
             .from('equipe_integrantes')
             .select('equipe_id, status')
-            .eq('integrante_id', perfilId)
+            .eq('integrante_id', perfilId as string) // Força o tipo como string
             .in('equipe_id', equipesIds);
           
           if (participacoesError) throw participacoesError;
@@ -202,9 +203,18 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
     verificarInscricao();
   }, [gameId, perfilId]);
   
-  // Filtrar equipes por status
-  const equipesPendentes = equipes.filter(equipe => equipe.status === 'pendente');
-  const equipesAtivas = equipes.filter(equipe => equipe.status === 'ativa');
+  // Filtrar equipes com base na quantidade de integrantes
+  const equipesCompletas = equipes.filter(equipe => 
+    equipe.status === 'ativa' && 
+    quantidadeMaximaIntegrantes !== undefined && 
+    equipe.total_integrantes >= quantidadeMaximaIntegrantes
+  );
+  
+  const equipesDisponiveis = equipes.filter(equipe => 
+    equipe.status === 'ativa' && 
+    (quantidadeMaximaIntegrantes === undefined || 
+    equipe.total_integrantes < quantidadeMaximaIntegrantes)
+  );
   
   // Solicitar participação em uma equipe
   const solicitarParticipacao = async (equipeId: string, equipeName: string, event: React.MouseEvent) => {
@@ -219,6 +229,9 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
       return;
     }
     
+    // Garantir que perfilId é uma string
+    const perfilIdString = String(perfilId);
+    
     if (jaInscrito) {
       toast({
         title: "Você já está inscrito",
@@ -226,6 +239,32 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
         variant: "destructive",
       });
       return;
+    }
+
+    if (quantidadeMaximaIntegrantes !== undefined) {
+      try {
+        // Buscar todos os integrantes da equipe para verificar a quantidade
+        const { data: integrantesEquipe, error } = await supabase
+          .from('equipe_integrantes')
+          .select('id')
+          .eq('equipe_id', equipeId);
+          
+        if (error) throw error;
+        
+        // Verificar se o número de integrantes já atingiu o máximo
+        const totalIntegrantes = integrantesEquipe ? integrantesEquipe.length : 0;
+        
+        if (totalIntegrantes >= quantidadeMaximaIntegrantes) {
+          toast({
+            title: "Equipe com limite máximo de integrantes",
+            description: `Esta equipe já atingiu o limite máximo de ${quantidadeMaximaIntegrantes} integrantes.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao verificar número de integrantes:', error);
+      }
     }
     
     try {
@@ -236,7 +275,7 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
         .from('equipe_integrantes')
         .insert({
           equipe_id: equipeId,
-          integrante_id: perfilId,
+          integrante_id: perfilIdString,
           status: 'pendente',
           is_owner: false,
           created_at: new Date().toISOString(),
@@ -320,89 +359,27 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Equipes pendentes */}
-        {equipesPendentes.length > 0 && (
+        {/* Equipes Disponíveis */}
+        {equipesDisponiveis.length > 0 && (
           <div className="mb-6">
             <div 
               className="flex items-center justify-between cursor-pointer mb-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
-              onClick={() => setMostrarPendentes(!mostrarPendentes)}
-            >
-              <h3 className="text-lg font-medium flex items-center">
-                <Badge variant="outline" className="mr-2 bg-yellow-50 text-yellow-700 border-yellow-200">
-                  {equipesPendentes.length}
-                </Badge>
-                Equipes Pendentes
-              </h3>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                {mostrarPendentes ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </div>
-            
-            {mostrarPendentes && (
-              <div className="space-y-2 ml-1 border-l-2 border-yellow-200 pl-3">
-                {equipesPendentes.map(equipe => (
-                  <div 
-                    key={equipe.id} 
-                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="cursor-pointer" onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}>
-                        <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
-                        <div className="text-sm text-gray-600 flex items-center">
-                          <span className="mr-2">Líder: {equipe.lider_nome}</span>
-                          <div className="flex items-center">
-                            <Users className="h-3.5 w-3.5 text-gray-500 mr-1" />
-                            <span>{equipe.total_integrantes}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Pendente
-                        </Badge>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/gamerun/equipe/${equipe.id}/view`);
-                            }}
-                            className="text-gray-600 hover:text-gray-700"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Equipes ativas */}
-        {equipesAtivas.length > 0 && (
-          <div>
-            <div 
-              className="flex items-center justify-between cursor-pointer mb-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
-              onClick={() => setMostrarAtivas(!mostrarAtivas)}
+              onClick={() => setMostrarDisponiveis(!mostrarDisponiveis)}
             >
               <h3 className="text-lg font-medium flex items-center">
                 <Badge variant="outline" className="mr-2 bg-green-50 text-green-700 border-green-200">
-                  {equipesAtivas.length}
+                  {equipesDisponiveis.length}
                 </Badge>
-                Equipes Ativas
+                Equipes Disponíveis
               </h3>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                {mostrarAtivas ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {mostrarDisponiveis ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </div>
             
-            {mostrarAtivas && (
+            {mostrarDisponiveis && (
               <div className="space-y-2 ml-1 border-l-2 border-green-200 pl-3">
-                {equipesAtivas.map(equipe => (
+                {equipesDisponiveis.map(equipe => (
                   <div 
                     key={equipe.id} 
                     className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors group"
@@ -415,13 +392,18 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
                           <div className="flex items-center">
                             <Users className="h-3.5 w-3.5 text-gray-500 mr-1" />
                             <span>{equipe.total_integrantes}</span>
+                            {quantidadeMaximaIntegrantes !== undefined && (
+                              <span className="ml-1 text-xs">
+                                / {quantidadeMaximaIntegrantes}
+                                {equipe.total_integrantes >= quantidadeMaximaIntegrantes && (
+                                  <span className="ml-1 text-red-500 font-medium">(Completo)</span>
+                                )}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Ativa
-                        </Badge>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
@@ -444,6 +426,86 @@ export default function ListaEquipesInscritas({ gameId, onParticipacaoSolicitada
                               disabled={solicitando}
                               className="text-blue-600 hover:text-blue-700"
                               title="Solicitar participação"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Equipes Completas */}
+        {equipesCompletas.length > 0 && (
+          <div>
+            <div 
+              className="flex items-center justify-between cursor-pointer mb-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
+              onClick={() => setMostrarCompletas(!mostrarCompletas)}
+            >
+              <h3 className="text-lg font-medium flex items-center">
+                <Badge variant="outline" className="mr-2 bg-gray-100 text-gray-700 border-gray-200">
+                  {equipesCompletas.length}
+                </Badge>
+                Equipes Completas
+              </h3>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                {mostrarCompletas ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </div>
+            
+            {mostrarCompletas && (
+              <div className="space-y-2 ml-1 border-l-2 border-gray-200 pl-3">
+                {equipesCompletas.map(equipe => (
+                  <div 
+                    key={equipe.id} 
+                    className="p-3 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="cursor-pointer" onClick={() => router.push(`/gamerun/equipe/${equipe.id}/view`)}>
+                        <h4 className="font-medium group-hover:text-primary-600 transition-colors">{equipe.nome}</h4>
+                        <div className="text-sm text-gray-600 flex items-center">
+                          <span className="mr-2">Líder: {equipe.lider_nome}</span>
+                          <div className="flex items-center">
+                            <Users className="h-3.5 w-3.5 text-gray-500 mr-1" />
+                            <span>{equipe.total_integrantes}</span>
+                            {quantidadeMaximaIntegrantes !== undefined && (
+                              <span className="ml-1 text-xs">
+                                / {quantidadeMaximaIntegrantes}
+                                {equipe.total_integrantes >= quantidadeMaximaIntegrantes && (
+                                  <span className="ml-1 text-red-500 font-medium">(Completo)</span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/gamerun/equipe/${equipe.id}/view`);
+                            }}
+                            className="text-gray-600 hover:text-gray-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          
+                          {/* Botão para solicitar participação (sempre desabilitado) */}
+                          {perfilId && !jaInscrito && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={true}
+                              className="text-gray-400 cursor-not-allowed"
+                              title={`Equipe atingiu o limite máximo de ${quantidadeMaximaIntegrantes} integrantes`}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>

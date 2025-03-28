@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,13 +72,15 @@ interface Quest {
 }
 
 interface QuestsAdminClientProps {
-  game: Game;
-  quests: Quest[];
+  gameId: string;
+  supabase: any;
+  exibirAlerta: (mensagem: string, tipo: 'sucesso' | 'erro' | 'info') => void;
 }
 
-export default function QuestsAdminClient({ game, quests }: QuestsAdminClientProps) {
-  const [questsList, setQuestsList] = useState<Quest[]>(quests);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: QuestsAdminClientProps) {
+  const [game, setGame] = useState<Game | null>(null);
+  const [questsList, setQuestsList] = useState<Quest[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
@@ -99,6 +101,42 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   
   const router = useRouter();
   const { toast } = useToast();
+  
+  // Carregar dados do game e quests
+  useEffect(() => {
+    const carregarDados = async () => {
+      setIsLoading(true);
+      try {
+        // Carregar dados do game
+        const { data: gameData, error: gameError } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', gameId)
+          .single();
+          
+        if (gameError) throw gameError;
+        setGame(gameData);
+        
+        // Carregar todas as quests do game
+        const { data: questsData, error: questsError } = await supabase
+          .from('quests')
+          .select('*')
+          .eq('game_id', gameId)
+          .order('numero', { ascending: true })
+          .order('created_at', { ascending: true });
+          
+        if (questsError) throw questsError;
+        setQuestsList(questsData || []);
+      } catch (error: any) {
+        console.error('Erro ao carregar dados:', error);
+        exibirAlerta('Erro ao carregar dados: ' + error.message, 'erro');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    carregarDados();
+  }, [gameId, supabase, exibirAlerta]);
   
   // Filtrar quests por status
   const pendentes = questsList.filter(q => q.status === 'pendente');
@@ -266,7 +304,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_inicio: formData.data_inicio || null,
         data_fim: formData.data_fim || null,
         status: formData.status,
-        game_id: game.id,
+        game_id: game?.id,
         arquivo_pdf: formData.arquivo_pdf
       };
       
@@ -284,7 +322,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         const { data: equipes, error: equipesError } = await supabase
           .from('game_equipes')
           .select('id')
-          .eq('game_id', game.id);
+          .eq('game_id', game?.id);
         
         if (equipesError) throw equipesError;
         
@@ -386,7 +424,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   
   // Alterar a navegação de volta para o gamerun-admin em vez de admin/games
   const handleBackToGames = () => {
-    router.push(`/gamerun-admin/${game.id}`);
+    router.push(`/gamerun-admin/${game?.id}`);
   };
   
   // Função para fazer upload do arquivo para o Storage do Supabase
@@ -421,7 +459,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${questId}_${Date.now()}.${fileExt}`;
-      const filePath = `${game.id}/${fileName}`;
+      const filePath = `${game?.id}/${fileName}`;
       
       console.log('Tentando fazer upload para:', filePath, 'como usuário autenticado');
       
@@ -487,17 +525,17 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quests do Game</h1>
           <p className="mt-1 text-gray-600">
-            Game: {game.nome} 
+            Game: {game?.nome} 
             <span className="mx-2">•</span>
             <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-              game.status === 'ativo' ? 'bg-green-100 text-green-800' :
-              game.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
-              game.status === 'inativo' ? 'bg-gray-100 text-gray-800' :
+              game?.status === 'ativo' ? 'bg-green-100 text-green-800' :
+              game?.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+              game?.status === 'inativo' ? 'bg-gray-100 text-gray-800' :
               'bg-red-100 text-red-800'
             }`}>
-              {game.status === 'pendente' ? 'Pendente' :
-               game.status === 'ativo' ? 'Ativo' :
-               game.status === 'inativo' ? 'Inativo' : 'Encerrado'}
+              {game?.status === 'pendente' ? 'Pendente' :
+               game?.status === 'ativo' ? 'Ativo' :
+               game?.status === 'inativo' ? 'Inativo' : 'Encerrado'}
             </span>
           </p>
         </div>

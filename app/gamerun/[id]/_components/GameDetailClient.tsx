@@ -794,6 +794,7 @@ export default function GameDetailClient({ gameId }: GameDetailClientProps) {
             <ListaEquipesInscritas 
               gameId={gameId} 
               onParticipacaoSolicitada={handleParticipacaoSolicitada}
+              quantidadeMaximaIntegrantes={game?.quantidade_integrantes}
             />
           </div>
         </div>

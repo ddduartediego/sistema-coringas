@@ -204,14 +204,15 @@ export default function GameCard({
           
           {/* Botões */}
           <div className="flex space-x-2 pt-4">
-            <button
-              type="button"
-              onClick={() => onOpenModal(id)}
+            <Link
+              href={{
+                pathname: `/gamerun-admin/${id}`,
+              }}
               className="flex flex-1 items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
             >
               <SportsEsports className="mr-1 h-4 w-4" />
               Detalhes
-            </button>
+            </Link>
             
             {status === 'pendente' && (
               <button
