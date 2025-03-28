@@ -167,7 +167,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       data_inicio: quest.data_inicio ? formatarDataInput(quest.data_inicio) : '',
       data_fim: quest.data_fim ? formatarDataInput(quest.data_fim) : '',
       status: quest.status,
-      arquivo_pdf: quest.arquivo_pdf
+      arquivo_pdf: quest.arquivo_pdf || null
     });
     setModalMode('edit');
     setShowModal(true);
@@ -371,7 +371,12 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         }
       }
       
-      const questData: Partial<Quest> = {
+      // Garantir que game_id é sempre uma string válida
+      if (!game.id) {
+        throw new Error("ID do game não está disponível");
+      }
+      
+      const questData = {
         titulo: formData.titulo,
         descricao: formData.descricao,
         numero: formData.numero ? parseInt(formData.numero) : null,
@@ -379,7 +384,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_inicio: formData.data_inicio || null,
         data_fim: formData.data_fim || null,
         status: formData.status,
-        game_id: game.id,
+        game_id: game.id, // Aqui garantimos que game_id é uma string
         arquivo_pdf: pdfUrl
       };
       
@@ -544,7 +549,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         <div className="flex space-x-4">
           <button
             type="button"
-            onClick={() => router.push(`/admin/games/${game.id}`)}
+            onClick={() => router.push(`/admin/games/${game.id}` as any)}
             className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
           >
             <ArrowLeft className="mr-2 h-5 w-5" />
