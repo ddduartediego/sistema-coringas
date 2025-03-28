@@ -10,6 +10,7 @@ import Link from "next/link";
 import { motion } from 'framer-motion';
 import SafeImage from '@/components/ui/safe-image';
 import AlertaPersonalizado from '../gamerun-admin/components/AlertaPersonalizado';
+import { useServerDate } from '@/lib/hooks/useServerDate';
 
 interface Game {
   id: string;
@@ -20,13 +21,21 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
-  tipo: string;
+  tipo: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export default function GameRunPage() {
   const supabase = createClientComponentClient<Database>();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const { 
+    serverDate, 
+    isLoading: isLoadingServerDate, 
+    isDateBeforeServerDate 
+  } = useServerDate();
+  
   const [alerta, setAlerta] = useState<{
     mensagem: string;
     tipo: 'sucesso' | 'erro' | 'info';
@@ -84,7 +93,8 @@ export default function GameRunPage() {
   function calcularTempoRestante(dataString: string | null) {
     if (!dataString) return "Data não definida";
     
-    const agora = new Date();
+    // Usar a data do servidor se disponível, senão usar a data local
+    const agora = serverDate || new Date();
     const dataInicio = new Date(dataString);
     
     if (agora > dataInicio) {
@@ -103,6 +113,7 @@ export default function GameRunPage() {
   }
 
   const placeholderImage = '/gamerun-placeholder.png'; // Usar imagem padrão caso não tenha imagem
+  const isPageLoading = loading || isLoadingServerDate;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -110,7 +121,7 @@ export default function GameRunPage() {
         <h1 className="text-3xl font-bold text-gray-900">GameRun - Jogos Disponíveis</h1>
         <p className="mt-1 text-gray-600">Confira os games disponíveis e participe com sua equipe.</p>
       </div>
-      {loading ? (
+      {isPageLoading ? (
         <div className="flex h-64 items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-primary-500"></div>
         </div>
@@ -199,17 +210,19 @@ export default function GameRunPage() {
                       </span>
                       Ver Detalhes
                     </Link>
-                    <Link 
-                      href={`/gamerun/${game.id}/quests`}
-                      className="flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none"
-                    >
-                      <span className="inline-block mr-2 h-4 w-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
-                        </svg>
-                      </span>
-                      Entrar
-                    </Link>
+                    {isDateBeforeServerDate(game.data_inicio) && (
+                      <Link 
+                        href={`/gamerun/${game.id}/quests`}
+                        className="flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none"
+                      >
+                        <span className="inline-block mr-2 h-4 w-4">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
+                          </svg>
+                        </span>
+                        Entrar
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>
