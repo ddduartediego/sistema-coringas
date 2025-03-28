@@ -42,7 +42,7 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
-  tipo: string;
+  tipo: string | null;
 }
 
 interface ModalGameProps {
@@ -62,7 +62,7 @@ const gameSchema = z.object({
   data_inicio: z.string().optional(),
   imagem_url: z.string().optional(),
   status: z.string(),
-  tipo: z.string()
+  tipo: z.string().optional()
 });
 
 export default function ModalGame({ 
@@ -137,8 +137,14 @@ export default function ModalGame({
           return;
         }
         
-        setGame(data);
-        reset(data);
+        // Garantir que o tipo seja uma string válida
+        const gameData = {
+          ...data,
+          tipo: data.tipo || 'Online'
+        };
+        
+        setGame(gameData);
+        reset(gameData);
         setLoading(false);
       } catch (error: any) {
         console.error('Erro ao carregar game:', error);
@@ -203,13 +209,18 @@ export default function ModalGame({
       try {
         const { data, error } = await supabase
           .from('configuracoes_game')
-          .select('tipo, descricao')
-          .eq('ativo', true);
+          .select('nome, id')
+          .eq('is_active', true);
           
         if (error) throw error;
         
         if (data && data.length > 0) {
-          setTiposGame(data);
+          // Mapear os nomes dos campos para manter compatibilidade com o restante do código
+          const tiposFormatados = data.map(item => ({
+            tipo: item.nome, // Usando 'nome' do banco como 'tipo' na interface
+            descricao: `Tipo: ${item.nome}` // Criando uma descrição padrão
+          }));
+          setTiposGame(tiposFormatados);
         }
       } catch (error) {
         console.error('Erro ao carregar tipos de game:', error);
@@ -321,8 +332,14 @@ export default function ModalGame({
         return;
       }
       
+      // Garantir que tipo tenha um valor
+      const gameData = {
+        ...data,
+        tipo: data.tipo || 'Online'
+      };
+      
       // Verificar se a imagem está em processo de upload (URL começa com blob:)
-      if (data.imagem_url?.startsWith('blob:')) {
+      if (gameData.imagem_url?.startsWith('blob:')) {
         setAlerta({
           mensagem: 'Aguarde o upload da imagem completar antes de salvar.',
           tipo: 'erro',
@@ -343,7 +360,7 @@ export default function ModalGame({
         },
         body: JSON.stringify({
           gameId: gameId || null,
-          gameData: data
+          gameData: gameData
         })
       });
       
