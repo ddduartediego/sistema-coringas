@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatDate, formatDateTimeInput, parseInputToUTC, isBeforeNow } from '@/lib/utils/date';
 
 interface Game {
   id: string;
@@ -144,16 +145,14 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
   const inativas = questsList.filter(q => q.status === 'inativo');
   const finalizadas = questsList.filter(q => q.status === 'finalizada');
   
-  // Formatar data
+  // Formatar data - substituído pela utilidade
   const formatarData = (dataString: string | null) => {
-    if (!dataString) return "";
-    return format(new Date(dataString), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
+    return formatDate(dataString, "dd 'de' MMMM 'de' yyyy 'às' HH:mm");
   };
   
-  // Formatar data para input
+  // Formatar data para input - substituído pela utilidade
   const formatarDataInput = (dataString: string | null) => {
-    if (!dataString) return "";
-    return format(new Date(dataString), "yyyy-MM-dd'T'HH:mm");
+    return formatDateTimeInput(dataString);
   };
   
   // Renderizar status da quest
@@ -301,8 +300,8 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
         descricao: formData.descricao,
         numero: formData.numero ? parseInt(formData.numero) : null,
         visivel: formData.visivel,
-        data_inicio: formData.data_inicio || null,
-        data_fim: formData.data_fim || null,
+        data_inicio: formData.data_inicio ? parseInputToUTC(formData.data_inicio) : null,
+        data_fim: formData.data_fim ? parseInputToUTC(formData.data_fim) : null,
         status: formData.status,
         game_id: game?.id,
         arquivo_pdf: formData.arquivo_pdf
@@ -328,7 +327,7 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
         
         if (equipes && equipes.length > 0) {
           // Criar entradas na tabela equipe_quests para cada equipe
-          const equipeQuestsData = equipes.map(equipe => ({
+          const equipeQuestsData = equipes.map((equipe: { id: string }) => ({
             equipe_id: equipe.id,
             quest_id: novaQuest.id,
             status: 'pendente'
@@ -442,7 +441,7 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
         throw new Error('Não foi possível acessar o Storage do Supabase');
       }
       
-      const questPdfsBucket = buckets.find(b => b.name === 'quest-pdfs');
+      const questPdfsBucket = buckets.find((b: { name: string }) => b.name === 'quest-pdfs');
       
       if (!questPdfsBucket) {
         throw new Error('Bucket quest-pdfs não encontrado. Por favor, crie o bucket no Supabase Studio');
@@ -639,23 +638,11 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
               transition={{ duration: 0.2 }}
               className="relative w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
             >
-              {/* Cabeçalho */}
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  {modalMode === 'create' ? 'Nova Quest' : 'Editar Quest'}
-                </h2>
-                
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
-                  disabled={isLoading}
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                {modalMode === 'create' ? 'Nova Quest' : 'Editar Quest'}
+              </h2>
               
-              <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Número

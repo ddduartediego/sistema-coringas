@@ -91,6 +91,37 @@ yarn start
 
 Por padrão, um usuário administrador é criado com o email `dd.duartediego@gmail.com`. Ao fazer login com essa conta pelo Google, ela será automaticamente vinculada ao perfil de administrador.
 
+## Padronização de Datas (GMT-3)
+
+O sistema utiliza um conjunto de funções utilitárias para padronizar o tratamento de datas, garantindo que todas sejam exibidas e manipuladas corretamente no fuso horário GMT-3 (Brasília).
+
+### Princípios básicos
+
+- Todas as datas são armazenadas em UTC no banco de dados
+- Todas as datas são exibidas em GMT-3 para o usuário
+- Inputs de data em formulários assumem o fuso GMT-3
+
+### Funções disponíveis
+
+As funções estão disponíveis em `lib/utils/date.ts`:
+
+```typescript
+// Para exibir datas
+import { formatDate } from '@/lib/utils/date';
+formatDate(dataDoServidor, 'dd/MM/yyyy HH:mm'); // '15/06/2023 15:00'
+
+// Para inputs datetime-local
+import { formatDateTimeInput, parseInputToUTC } from '@/lib/utils/date';
+// Ao carregar o form: formatDateTimeInput(dataDoServidor)
+// Ao salvar: parseInputToUTC(valorDoInput)
+```
+
+### Documentação completa
+
+Para documentação detalhada sobre todas as funções disponíveis, exemplos de uso e solução de problemas, consulte o arquivo:
+
+`lib/utils/date-utils.md`
+
 ## Estrutura de Arquivos
 
 - `/app` - Páginas e rotas da aplicação
@@ -98,6 +129,8 @@ Por padrão, um usuário administrador é criado com o email `dd.duartediego@gma
 - `/models` - Tipos e interfaces do TypeScript
 - `/supabase` - Scripts e configurações do Supabase
 - `/utils` - Funções utilitárias
+  - `/utils/date.ts` - Utilitários para manipulação de datas em GMT-3
+  - `/utils/date-utils.md` - Documentação detalhada sobre uso de datas
 
 ## Tecnologias Utilizadas
 

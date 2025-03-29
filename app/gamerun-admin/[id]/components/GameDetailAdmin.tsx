@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import SafeImage from '@/components/ui/safe-image';
 import ImageUploader from '../../components/ImageUploader';
 import Link from 'next/link';
+import { formatDate, formatDateTimeInput, parseInputToUTC } from '@/lib/utils/date';
 
 // Interfaces
 interface Equipe {
@@ -263,10 +264,11 @@ export default function GameDetailAdmin({
         return;
       }
       
-      // Garantir que tipo tenha um valor
+      // Converter data_inicio para UTC antes de salvar (se existir)
       const gameData = {
         ...data,
-        tipo: data.tipo || 'Online'
+        tipo: data.tipo || 'Online',
+        data_inicio: data.data_inicio ? parseInputToUTC(data.data_inicio as string) : null
       };
       
       // Verificar se a imagem está em processo de upload (URL começa com blob:)
@@ -446,6 +448,8 @@ export default function GameDetailAdmin({
                       type="datetime-local"
                       {...register('data_inicio')}
                       className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      // Formatar para a exibição em GMT-3
+                      defaultValue={game.data_inicio ? formatDateTimeInput(game.data_inicio) : ''}
                     />
                   </div>
                   
@@ -524,7 +528,7 @@ export default function GameDetailAdmin({
                   </div>
                   <p className="mt-1 text-gray-600">
                     {game.data_inicio 
-                      ? format(new Date(game.data_inicio), 'dd/MM/yyyy HH:mm') 
+                      ? formatDate(game.data_inicio, 'dd/MM/yyyy HH:mm') 
                       : 'Não definido'}
                   </p>
                 </div>
