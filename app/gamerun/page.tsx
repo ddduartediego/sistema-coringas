@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Database } from '@/lib/database.types';
+import { createClientSupabaseClient } from '@/lib/supabase/client';
 import { Refresh, SportsEsports } from '@mui/icons-material';
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,7 +27,7 @@ interface Game {
 }
 
 export default function GameRunPage() {
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClientSupabaseClient();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const { 

@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatDate, formatDateTimeInput, parseInputToUTC, isBeforeNow } from '@/lib/utils/date';
+import EditIcon from '@mui/icons-material/Edit';
 
 interface Game {
   id: string;
@@ -424,6 +425,11 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
   // Alterar a navegação de volta para o gamerun-admin em vez de admin/games
   const handleBackToGames = () => {
     router.push(`/gamerun-admin/${game?.id}`);
+  };
+  
+  // Navegar para a página de edição da quest
+  const handleEditQuestPage = (quest: Quest) => {
+    router.push(`/gamerun-admin/${gameId}/quests/${quest.id}/edit` as any);
   };
   
   // Função para fazer upload do arquivo para o Storage do Supabase
@@ -857,8 +863,8 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
                   <DropdownMenuContent align="end" className="bg-white shadow-lg border border-gray-200 z-50">
                     <DropdownMenuLabel>Ações</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenEditModal(quest)} className="cursor-pointer hover:bg-gray-100">
-                      <Edit className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => handleEditQuestPage(quest)} className="cursor-pointer hover:bg-gray-100">
+                      <EditIcon className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleVisibility(quest)} className="cursor-pointer hover:bg-gray-100">
@@ -964,9 +970,10 @@ export default function QuestsAdminClient({ gameId, supabase, exibirAlerta }: Qu
             
             <div className="bg-gray-50 px-5 py-3 text-right">
               <button
-                onClick={() => handleOpenEditModal(quest)}
-                className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                onClick={() => handleEditQuestPage(quest)}
+                className="inline-flex items-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none transition-colors"
               >
+                <EditIcon className="mr-1.5 h-3.5 w-3.5" fontSize="small" />
                 Editar Quest
               </button>
             </div>

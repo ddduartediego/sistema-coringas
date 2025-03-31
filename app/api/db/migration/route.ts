@@ -1,9 +1,9 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { Database } from '@/lib/database.types';
+import { createRouteSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
   try {
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const scriptContent = fs.readFileSync(scriptPath, 'utf-8');
 
     // Executar o script
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = await createRouteSupabaseClient();
     // Usar o cliente tipado como any para lidar com RPCs não definidas no tipo Database
     const supabaseAny = supabase as any;
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClientSupabaseClient } from '@/lib/supabase/client';
 import GameCard from './components/GameCard';
 import ModalGame from './components/ModalGame';
 import AlertaPersonalizado from './components/AlertaPersonalizado';
@@ -16,11 +16,13 @@ interface Game {
   data_inicio: string | null;
   imagem_url: string | null;
   status: string;
-  tipo: string;
+  tipo: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export default function GameRunAdminPage() {
-  const supabase = createClientComponentClient<any>();
+  const supabase = createClientSupabaseClient();
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);

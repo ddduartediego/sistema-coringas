@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import EditIcon from '@mui/icons-material/Edit';
 
 interface Game {
   id: string;
@@ -525,6 +526,11 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     }
   };
   
+  // Navegar para a página de edição da quest
+  const handleEditQuestPage = (questId: string) => {
+    router.push(`/admin/games/${game.id}/quests/${questId}/edit` as any);
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex items-center justify-between">
@@ -933,8 +939,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Ações</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleOpenEditModal(quest)}>
-                      <Edit className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={() => handleEditQuestPage(quest.id)}>
+                      <EditIcon className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleVisibility(quest)}>
@@ -1046,9 +1052,10 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
             
             <div className="bg-gray-50 px-5 py-3 text-right">
               <button
-                onClick={() => handleOpenEditModal(quest)}
-                className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                onClick={() => handleEditQuestPage(quest.id)}
+                className="inline-flex items-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none transition-colors"
               >
+                <EditIcon className="mr-1.5 h-3.5 w-3.5" fontSize="small" />
                 Editar Quest
               </button>
             </div>

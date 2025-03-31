@@ -13,7 +13,7 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
 console.log('Inicializando cliente Supabase com URL:', 
   process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...');
 
-// Inicializar o cliente Supabase
+// Inicializar o cliente Supabase global para uso em toda a aplicação
 export const supabase = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,4 +28,19 @@ export const supabase = createBrowserClient<Database>(
       }
     }
   }
-); 
+);
+
+// Função para criar um client component client
+// Substitui a função createClientComponentClient da biblioteca auth-helpers-nextjs
+export const createClientSupabaseClient = () => {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    }
+  );
+}; 
