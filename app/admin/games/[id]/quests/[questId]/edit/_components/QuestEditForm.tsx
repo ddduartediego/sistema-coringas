@@ -153,27 +153,25 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
         throw new Error('Não foi possível acessar o Storage do Supabase');
       }
       
-      const questPdfsBucket = buckets.find((b: any) => b.name === 'quest-pdfs');
+      let questPdfsBucket = buckets.find((b: any) => b.name === 'quest-pdfs');
       
+      // Se o bucket não existir, tentar acessar diretamente
       if (!questPdfsBucket) {
-        throw new Error('Bucket quest-pdfs não encontrado. Por favor, crie o bucket no Supabase Studio');
+        const { data: files, error: filesError } = await supabase
+          .storage
+          .from('quest-pdfs')
+          .list();
+          
+        if (filesError) {
+          console.error('Erro ao acessar bucket:', filesError);
+          throw new Error('Não foi possível acessar o bucket quest-pdfs. Verifique as permissões.');
+        }
       }
       
       // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${questId}_${Date.now()}.${fileExt}`;
       const filePath = `${game.id}/${fileName}`;
-      
-      // Simulação de progresso de upload
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 300);
       
       // Upload do arquivo
       const { data, error } = await supabase.storage
@@ -183,11 +181,8 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
           upsert: true
         });
       
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
       if (error) {
-        console.error('Erro detalhado do upload:', JSON.stringify(error));
+        console.error('Erro ao fazer upload:', error);
         throw error;
       }
       
