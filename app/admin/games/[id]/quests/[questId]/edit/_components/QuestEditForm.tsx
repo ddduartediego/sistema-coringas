@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +57,7 @@ interface Quest {
   numero: number | null;
   visivel: boolean;
   arquivo_pdf?: string | null;
+  chave?: string | null;
 }
 
 interface QuestEditFormProps {
@@ -75,6 +76,7 @@ const questSchema = z.object({
   status: z.string(),
   pontos: z.string().default("0"),
   arquivo_pdf: z.string().nullable().optional(),
+  chave: z.string().nullable().optional(),
 });
 
 type QuestFormValues = z.infer<typeof questSchema>;
@@ -85,6 +87,7 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [showChave, setShowChave] = useState<boolean>(false);
   
   const router = useRouter();
   const { toast } = useToast();
@@ -102,7 +105,8 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
       data_fim: quest.data_fim ? formatDateTimeInput(quest.data_fim) : '',
       status: quest.status,
       pontos: quest.pontos?.toString() || '0',
-      arquivo_pdf: quest.arquivo_pdf || null
+      arquivo_pdf: quest.arquivo_pdf || null,
+      chave: quest.chave || ''
     }
   });
   
@@ -113,9 +117,9 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
   const watchVisivel = watch("visivel");
   
   // Atualizar hasChanges quando há mudanças no formulário ou arquivo PDF
-  useState(() => {
+  useEffect(() => {
     setHasChanges(isDirty || pdfFile !== null);
-  });
+  }, [isDirty, pdfFile]);
   
   // Função para lidar com o upload do arquivo PDF
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,7 +288,8 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
         data_fim: data.data_fim ? parseInputToUTC(data.data_fim) : null,
         status: data.status,
         pontos: data.pontos ? parseInt(data.pontos) : 0,
-        arquivo_pdf: data.arquivo_pdf
+        arquivo_pdf: data.arquivo_pdf,
+        chave: data.chave
       };
       
       // Fazer upload do PDF se houver um novo arquivo
@@ -339,30 +344,68 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
   
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Header com título e botões */}
+      <div className="mb-8 flex items-center justify-between bg-gradient-to-r from-primary-50 to-primary-100 px-6 py-4 shadow-sm rounded-lg border border-primary-200">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {quest.numero ? `Quest #${quest.numero} - ${quest.titulo}` : quest.titulo}
+          </h1>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            className="flex items-center gap-2 border-primary-300 hover:bg-primary-50"
+          >
+            <ArrowBackIcon sx={{ fontSize: 18 }} />
+            Voltar
+          </Button>
+          
+          <Button
+            type="submit"
+            disabled={isLoading || isUploading}
+            className={`flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white ${(!hasChanges || isLoading) ? 'opacity-50' : ''}`}
+          >
+            {isLoading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></div>
+                <span>Salvando...</span>
+              </>
+            ) : (
+              <>
+                <SaveIcon sx={{ fontSize: 18 }} />
+                <span>Salvar Alterações</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
       <Tabs defaultValue="informacoes" className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-3">
-          <TabsTrigger value="informacoes" className="flex items-center gap-2">
+        <TabsList className="mb-6 grid w-full grid-cols-3 bg-primary-50">
+          <TabsTrigger value="informacoes" className="flex items-center gap-2 data-[state=active]:bg-primary-100 data-[state=active]:text-primary-900">
             <DescriptionIcon sx={{ fontSize: 18 }} />
             <span>Informações</span>
           </TabsTrigger>
-          <TabsTrigger value="datas" className="flex items-center gap-2">
+          <TabsTrigger value="datas" className="flex items-center gap-2 data-[state=active]:bg-primary-100 data-[state=active]:text-primary-900">
             <DateRangeIcon sx={{ fontSize: 18 }} />
             <span>Datas</span>
           </TabsTrigger>
-          <TabsTrigger value="configuracoes" className="flex items-center gap-2">
+          <TabsTrigger value="configuracoes" className="flex items-center gap-2 data-[state=active]:bg-primary-100 data-[state=active]:text-primary-900">
             <SettingsIcon sx={{ fontSize: 18 }} />
             <span>Configurações</span>
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="informacoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Básicas</CardTitle>
+          <Card className="border-primary-200">
+            <CardHeader className="bg-primary-50/50">
+              <CardTitle className="text-primary-900">Informações Básicas</CardTitle>
               <CardDescription>Dados principais da quest</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
                 <div className="sm:col-span-1">
                   <label className="block text-sm font-medium text-gray-700">
                     Número
@@ -371,13 +414,18 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                     name="numero"
                     control={control}
                     render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="number"
-                        min="1"
-                        placeholder="Número da quest"
-                        className="mt-1"
-                      />
+                      <div>
+                        <Input
+                          {...field}
+                          type="number"
+                          min="1"
+                          placeholder="Número da quest"
+                          className="mt-1"
+                        />
+                        {errors.numero && (
+                          <p className="mt-1 text-sm text-red-500">{errors.numero.message}</p>
+                        )}
+                      </div>
                     )}
                   />
                 </div>
@@ -390,16 +438,18 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                     name="titulo"
                     control={control}
                     render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="Título da quest"
-                        className={`mt-1 ${errors.titulo ? "border-red-500" : ""}`}
-                      />
+                      <div>
+                        <Input
+                          {...field}
+                          placeholder="Título da quest"
+                          className={`mt-1 ${errors.titulo ? "border-red-500" : ""}`}
+                        />
+                        {errors.titulo && (
+                          <p className="mt-1 text-sm text-red-500">{errors.titulo.message}</p>
+                        )}
+                      </div>
                     )}
                   />
-                  {errors.titulo && (
-                    <p className="mt-1 text-sm text-red-500">{errors.titulo.message}</p>
-                  )}
                 </div>
               </div>
               
@@ -411,45 +461,97 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                   name="descricao"
                   control={control}
                   render={({ field }) => (
-                    <Textarea
-                      {...field}
-                      placeholder="Descrição detalhada da quest"
-                      rows={5}
-                      className="mt-1"
-                    />
+                    <div>
+                      <Textarea
+                        {...field}
+                        placeholder="Descrição detalhada da quest"
+                        rows={5}
+                        className="mt-1"
+                      />
+                      {errors.descricao && (
+                        <p className="mt-1 text-sm text-red-500">{errors.descricao.message}</p>
+                      )}
+                    </div>
                   )}
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Pontos
-                </label>
-                <Controller
-                  name="pontos"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      type="number"
-                      min="0"
-                      placeholder="Pontos para esta quest"
-                      className="mt-1"
-                    />
-                  )}
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Pontos que serão concedidos às equipes ao concluírem esta quest
-                </p>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Pontos
+                  </label>
+                  <Controller
+                    name="pontos"
+                    control={control}
+                    render={({ field }) => (
+                      <div>
+                        <Input
+                          {...field}
+                          type="number"
+                          min="0"
+                          placeholder="Pontos para esta quest"
+                          className="mt-1"
+                        />
+                        {errors.pontos && (
+                          <p className="mt-1 text-sm text-red-500">{errors.pontos.message}</p>
+                        )}
+                        <p className="mt-1 text-sm text-gray-500">
+                          Pontos que serão concedidos às equipes ao concluírem esta quest
+                        </p>
+                      </div>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Chave (Resposta)
+                  </label>
+                  <Controller
+                    name="chave"
+                    control={control}
+                    render={({ field }) => (
+                      <div>
+                        <div className="relative mt-1">
+                          <Input
+                            {...field}
+                            type={showChave ? "text" : "password"}
+                            placeholder="Chave ou resposta da quest"
+                            className="mt-1 pr-10"
+                            value={field.value || ''}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowChave(!showChave)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 mt-1 text-gray-400 hover:text-gray-600"
+                          >
+                            {showChave ? (
+                              <VisibilityOffIcon className="h-5 w-5" />
+                            ) : (
+                              <VisibilityIcon className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
+                        {errors.chave && (
+                          <p className="mt-1 text-sm text-red-500">{errors.chave.message}</p>
+                        )}
+                        <p className="mt-1 text-sm text-gray-500">
+                          Chave ou resposta que será utilizada para validar a conclusão da quest
+                        </p>
+                      </div>
+                    )}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="datas">
-          <Card>
-            <CardHeader>
-              <CardTitle>Datas e Prazos</CardTitle>
+          <Card className="border-primary-200">
+            <CardHeader className="bg-primary-50/50">
+              <CardTitle className="text-primary-900">Datas e Prazos</CardTitle>
               <CardDescription>Configure quando a quest estará disponível</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -515,9 +617,9 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
         </TabsContent>
         
         <TabsContent value="configuracoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações da Quest</CardTitle>
+          <Card className="border-primary-200">
+            <CardHeader className="bg-primary-50/50">
+              <CardTitle className="text-primary-900">Configurações da Quest</CardTitle>
               <CardDescription>Configurações adicionais e material de apoio</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -526,34 +628,21 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                   <label className="block text-sm font-medium text-gray-700">
                     Status
                   </label>
-                  <div className="mt-1 flex items-center space-x-2">
-                    <Controller
-                      name="status"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione o status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="ativo">Ativa</SelectItem>
-                            <SelectItem value="inativo">Inativa</SelectItem>
-                            <SelectItem value="finalizada">Finalizada</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    <div className="shrink-0">
-                      {renderStatusIcon(watchStatus)}
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    {renderStatusBadge(watchStatus)}
-                  </div>
+                  <Controller
+                    name="status"
+                    control={control}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="pendente" className="bg-white text-gray-900">Pendente</option>
+                        <option value="ativo" className="bg-white text-gray-900">Ativa</option>
+                        <option value="inativo" className="bg-white text-gray-900">Inativa</option>
+                        <option value="finalizada" className="bg-white text-gray-900">Finalizada</option>
+                      </select>
+                    )}
+                  />
                 </div>
                 
                 <div>
@@ -597,9 +686,9 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                 <label className="block text-sm font-medium text-gray-700">
                   Arquivo PDF
                 </label>
-                <div className="mt-1 rounded-md border border-gray-300 bg-white p-4">
+                <div className="mt-1 rounded-md border border-primary-200 bg-white p-4">
                   <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-primary-50/50 hover:bg-primary-100/50 transition-colors">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <UploadFileIcon className="w-10 h-10 mb-3 text-gray-400" />
                         <p className="mb-2 text-sm text-gray-500">
@@ -685,27 +774,6 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
           </Card>
         </TabsContent>
       </Tabs>
-      
-      <div className="flex justify-between border-t border-gray-200 pt-6">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleBack}
-          className="flex items-center gap-2"
-        >
-          <ArrowBackIcon sx={{ fontSize: 18 }} />
-          Voltar para Quests
-        </Button>
-        
-        <Button
-          type="submit"
-          disabled={isLoading || isUploading || !hasChanges}
-          className={`flex items-center gap-2 ${!hasChanges ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <SaveIcon sx={{ fontSize: 18 }} />
-          {isLoading ? "Salvando..." : "Salvar Alterações"}
-        </Button>
-      </div>
     </form>
   );
 } 

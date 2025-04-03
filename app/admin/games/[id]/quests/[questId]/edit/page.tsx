@@ -38,6 +38,7 @@ interface QuestData {
   numero: number | null;
   visivel: boolean;
   arquivo_pdf: string | null;
+  chave: string | null;
 }
 
 // Interfaces esperadas pelos componentes
@@ -65,6 +66,7 @@ interface Quest {
   numero: number | null;
   visivel: boolean;
   arquivo_pdf?: string | null;
+  chave?: string | null;
 }
 
 interface PageProps {
@@ -160,35 +162,19 @@ export default async function QuestEditPage({ params }: PageProps) {
       updated_at: questData.updated_at || '',
       numero: questData.numero,
       visivel: questData.visivel,
-      arquivo_pdf: questData.arquivo_pdf
+      arquivo_pdf: questData.arquivo_pdf,
+      chave: questData.chave
     };
     
     return (
       <div className="bg-white rounded-md shadow-sm p-6 mb-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{quest.titulo || 'Nova Quest'}</h1>
             <div className="mt-2 flex items-center">
-              <span className="text-gray-600 mr-2">Game: {game.nome}</span>
-              <Badge
-                className={`${
-                  game.status === 'ativo' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-                  game.status === 'pendente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
-                  game.status === 'inativo' ? 'bg-gray-100 text-gray-800 hover:bg-gray-100' :
-                  'bg-red-100 text-red-800 hover:bg-red-100'
-                }`}
-              >
-                {game.status === 'pendente' ? 'Pendente' :
-                 game.status === 'ativo' ? 'Ativo' :
-                 game.status === 'inativo' ? 'Inativo' : 'Encerrado'}
-              </Badge>
+              <span className="text-gray-600">Game: {game.nome}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="flex items-center text-sm text-gray-500">
-              <CalendarMonthIcon fontSize="small" className="mr-1" />
-              Quest #{quest.numero || '?'}
-            </div>
             <Badge
               className={`${
                 quest.status === 'pendente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
