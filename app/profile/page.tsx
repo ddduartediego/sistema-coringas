@@ -402,7 +402,7 @@ export default function ProfilePage() {
         ...data
       };
       setProfileData(updatedProfile);
-      
+
       // Verificar campos incompletos após atualização
       checkIncompleteFields(updatedProfile);
 
@@ -798,7 +798,7 @@ export default function ProfilePage() {
                           </div>
                         ) : (
                           <p className="font-medium">
-                            {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation).toLocaleDateString('pt-BR') : '-'}
+                            {profileData?.last_blood_donation ? new Date(profileData.last_blood_donation + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                           </p>
                         )}
                         {profileData?.is_blood_donor && canDonateBlood(profileData?.last_blood_donation) && (
@@ -1013,7 +1013,7 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <p className="font-medium">
-                        {profileData?.birth_date ? new Date(profileData.birth_date).toLocaleDateString('pt-BR') : '-'}
+                        {profileData?.birth_date ? new Date(profileData.birth_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                       </p>
                     )}
                   </div>
