@@ -19,7 +19,8 @@ import {
   EyeOff,
   X,
   CheckSquare,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 
@@ -96,6 +97,7 @@ export default function QuestsClient({
   const [questsVisiveis, setQuestsVisiveis] = useState<Quest[]>([]);
   const [isLider, setIsLider] = useState<boolean>(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   
   const router = useRouter();
   
@@ -177,6 +179,21 @@ export default function QuestsClient({
     }
   };
   
+  // Função para atualizar as quests disponíveis
+  const atualizarQuests = async () => {
+    try {
+      setIsRefreshing(true);
+      router.refresh(); // Força o Next.js a revalidar os dados da página
+    } catch (error) {
+      console.error('Erro ao atualizar quests:', error);
+    } finally {
+      // Aguardar um momento antes de desativar o estado de atualização
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 1000);
+    }
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 rounded-lg bg-blue-50 p-6 shadow-sm">
@@ -185,13 +202,23 @@ export default function QuestsClient({
             <h1 className="text-3xl font-bold text-gray-900">Quests do Game</h1>
             <p className="mt-1 text-gray-600">Equipe: {equipe.nome}</p>
           </div>
-          <button
-            onClick={() => router.push(`/gamerun/${gameId}`)}
-            className="mt-4 sm:mt-0 flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
-          >
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Voltar para o Game
-          </button>
+          <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+            <button
+              onClick={atualizarQuests}
+              disabled={isRefreshing}
+              className={`flex items-center rounded-md border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 hover:border-primary-700 focus:outline-none transition-colors ${isRefreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
+            >
+              <RefreshCw className={`mr-2 h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </button>
+            <button
+              onClick={() => router.push(`/gamerun/${gameId}`)}
+              className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Voltar para o Game
+            </button>
+          </div>
         </div>
       </div>
       
