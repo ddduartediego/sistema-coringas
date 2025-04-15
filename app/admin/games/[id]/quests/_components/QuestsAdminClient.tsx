@@ -97,6 +97,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     data_inicio: '',
     data_fim: '',
     status: 'pendente',
+    tipo: 'regular',
     arquivo_pdf: null as string | null
   });
   
@@ -151,6 +152,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       data_inicio: '',
       data_fim: '',
       status: 'pendente',
+      tipo: 'regular',
       arquivo_pdf: null
     });
     setModalMode('create');
@@ -168,6 +170,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       data_inicio: quest.data_inicio ? formatarDataInput(quest.data_inicio) : '',
       data_fim: quest.data_fim ? formatarDataInput(quest.data_fim) : '',
       status: quest.status,
+      tipo: quest.tipo || 'regular',
       arquivo_pdf: quest.arquivo_pdf || null
     });
     setModalMode('edit');
@@ -260,6 +263,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
       data_inicio: '',
       data_fim: '',
       status: 'pendente',
+      tipo: 'regular',
       arquivo_pdf: null
     });
     setPdfFile(null);
@@ -357,6 +361,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_inicio: formData.data_inicio || null,
         data_fim: formData.data_fim || null,
         status: formData.status,
+        tipo: formData.tipo,
         game_id: game.id, // Aqui garantimos que game_id é uma string
         // arquivo_pdf será atualizado depois, se necessário
       };
@@ -834,6 +839,25 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                   
                   <p className="mt-1 text-sm text-gray-500">
                     Adicione um documento PDF com informações complementares para esta quest.
+                  </p>
+                </div>
+                
+                <div>
+                  <label htmlFor="tipo" className="block text-sm font-medium text-gray-700">
+                    Tipo da Quest
+                  </label>
+                  <select
+                    id="tipo"
+                    name="tipo"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="regular">Regular</option>
+                    <option value="cadeado">Cadeado</option>
+                  </select>
+                   <p className="mt-1 text-sm text-gray-500">
+                    'Regular' é visível normalmente. 'Cadeado' pode ter regras especiais de liberação.
                   </p>
                 </div>
                 

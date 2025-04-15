@@ -74,6 +74,7 @@ const questSchema = z.object({
   data_inicio: z.string().optional(),
   data_fim: z.string().optional(),
   status: z.string(),
+  tipo: z.string().optional(),
   pontos: z.string().default("0"),
   arquivo_pdf: z.string().nullable().optional(),
   chave: z.string().nullable().optional(),
@@ -104,6 +105,7 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
       data_inicio: quest.data_inicio ? formatDateTimeInput(quest.data_inicio) : '',
       data_fim: quest.data_fim ? formatDateTimeInput(quest.data_fim) : '',
       status: quest.status,
+      tipo: quest.tipo || 'regular',
       pontos: quest.pontos?.toString() || '0',
       arquivo_pdf: quest.arquivo_pdf || null,
       chave: quest.chave || ''
@@ -273,32 +275,36 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
     try {
       setIsLoading(true);
       
-      // Preparar objeto com os dados da quest
-      const questData: Partial<Quest> = {
+      let pdfUrl = quest.arquivo_pdf;
+      if (pdfFile) {
+        const uploadedUrl = await uploadPdfToStorage(pdfFile, quest.id);
+        if (uploadedUrl) {
+          pdfUrl = uploadedUrl;
+        } else {
+          // Tratar falha no upload, talvez retornar ou mostrar erro específico
+          setIsLoading(false);
+          return; // Impede o save se o upload falhar
+        }
+      }
+      
+      const updateData: Partial<Quest> = {
         titulo: data.titulo,
-        descricao: data.descricao || "",
-        numero: data.numero ? parseInt(data.numero) : null,
+        descricao: data.descricao,
+        numero: data.numero ? parseInt(data.numero, 10) : null,
         visivel: data.visivel,
         data_inicio: data.data_inicio ? parseInputToUTC(data.data_inicio) : null,
         data_fim: data.data_fim ? parseInputToUTC(data.data_fim) : null,
         status: data.status,
-        pontos: data.pontos ? parseInt(data.pontos) : 0,
-        arquivo_pdf: data.arquivo_pdf,
+        tipo: data.tipo,
+        pontos: parseInt(data.pontos, 10) || 0,
+        arquivo_pdf: pdfUrl,
         chave: data.chave
       };
-      
-      // Fazer upload do PDF se houver um novo arquivo
-      if (pdfFile) {
-        const pdfUrl = await uploadPdfToStorage(pdfFile, quest.id);
-        if (pdfUrl) {
-          questData.arquivo_pdf = pdfUrl;
-        }
-      }
       
       // Atualizar a quest
       const { data: updatedQuest, error } = await supabase
         .from('quests')
-        .update(questData)
+        .update(updateData)
         .eq('id', quest.id)
         .select()
         .single();
@@ -497,6 +503,32 @@ export default function QuestEditForm({ game, quest }: QuestEditFormProps) {
                       </div>
                     )}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tipo
+                  </label>
+                  <Controller
+                    name="tipo"
+                    control={control}
+                    defaultValue={quest.tipo || 'regular'}
+                    render={({ field }) => (
+                      <select
+                        {...field}
+                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="regular">Regular</option>
+                        <option value="cadeado">Cadeado</option>
+                      </select>
+                    )}
+                  />
+                  {errors.tipo && (
+                    <p className="mt-1 text-sm text-red-500">{errors.tipo.message}</p>
+                  )}
+                  <p className="mt-1 text-sm text-gray-500">
+                    Define o tipo da quest (Regular ou Cadeado).
+                  </p>
                 </div>
 
                 <div>
