@@ -15,7 +15,8 @@ import {
   BookOpen,
   Bookmark,
   FileText,
-  Download
+  Download,
+  Lock as LockIcon
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -141,8 +142,13 @@ export default function QuestDetailPage({
             {quest.titulo}
           </h1>
           <div className="flex items-center flex-wrap gap-2 mt-2">
-            <Badge variant="outline" className="bg-primary-50 text-primary-700 border-primary-200">
-              {quest.pontos} pontos
+            <Badge variant="outline" className="bg-primary-50 text-primary-700 border-primary-200 flex items-center">
+              <AwardIcon className="h-3.5 w-3.5 mr-1.5" />
+              {quest.tipo === 'cadeado' ? (
+                <LockIcon className="h-3.5 w-3.5" />
+              ) : (
+                <span>{quest.pontos} {quest.pontos === 1 ? 'ponto' : 'pontos'}</span>
+              )}
             </Badge>
             
             <Badge variant="outline" className={getStatusBadgeColor()}>

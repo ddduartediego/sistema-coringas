@@ -20,9 +20,12 @@ import {
   X,
   CheckSquare,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Award,
+  Lock as LockIcon
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 // Adicionar componentes para o menu dropdown
 interface DropdownMenuProps {
@@ -349,15 +352,17 @@ export default function QuestsClient({
                 )}
                 
                 <div className="mt-auto space-y-3">
-                  {/* Pontos */}
-                  {quest.pontos > 0 && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-primary-50">
-                        <CheckCircle className="h-3.5 w-3.5 text-primary-600" />
-                      </span>
-                      <span className="font-medium">{quest.pontos} {quest.pontos === 1 ? 'ponto' : 'pontos'}</span>
-                    </div>
-                  )}
+                  {/* Pontos ou Cadeado */}
+                  <div className="flex items-center">
+                    <Award className="h-3.5 w-3.5 mr-1" />
+                    <span>
+                      Pontos: {quest.tipo === 'cadeado' ? (
+                        <LockIcon className="h-3.5 w-3.5 inline-block align-middle text-gray-500 ml-1" />
+                      ) : (
+                        <span className="font-medium text-gray-700">{quest.pontos}</span>
+                      )}
+                    </span>
+                  </div>
                   
                   {/* Data de Início */}
                   {quest.data_inicio && (
@@ -381,13 +386,14 @@ export default function QuestsClient({
                   
                   {/* Botão Ver Detalhes */}
                   <div className="flex pt-4">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => router.push(`/gamerun/${gameId}/quests/${quest.id}`)}
-                      className="w-full flex items-center justify-center rounded-md bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all duration-200"
+                      className="border-primary-300 text-primary-700 hover:bg-primary-50"
                     >
-                      <Bookmark className="mr-2 h-4 w-4" />
-                      Abrir Quest
-                    </button>
+                      Ver Detalhes
+                    </Button>
                   </div>
                 </div>
               </div>
