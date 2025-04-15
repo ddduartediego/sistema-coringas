@@ -160,8 +160,8 @@ export default function QuestsClient({
     
     const diffEmDias = Math.ceil((dataLimite.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (diffEmDias === 1) {
-      return "Até amanhã";
+    if (diffEmDias >= 1) {
+      return "Hoje";
     } else if (diffEmDias <= 30) {
       return `Até ${diffEmDias} dias`;
     } else {
