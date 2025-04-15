@@ -155,15 +155,15 @@ export default function QuestsClient({
     const agora = new Date();
     
     if (agora > dataLimite) {
-      return "Disponível agora";
+      return "Tempo esgotado";
     }
     
     const diffEmDias = Math.ceil((dataLimite.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
     
     if (diffEmDias === 1) {
-      return "Disponível amanhã";
+      return "Até amanhã";
     } else if (diffEmDias <= 30) {
-      return `Disponível em ${diffEmDias} dias`;
+      return `Até ${diffEmDias} dias`;
     } else {
       return formatarData(dataString);
     }
@@ -380,7 +380,7 @@ export default function QuestsClient({
                       <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-amber-50">
                         <Clock className="h-3.5 w-3.5 text-amber-600" />
                       </span>
-                      <span>Prazo: {calcularTempoRestante(quest.data_fim)}</span>
+                      <span>Prazo: {calcularTempoRestante(quest.data_fim)}  ({formatarData(quest.data_fim)})</span>
                     </div>
                   )}
                   
