@@ -286,32 +286,12 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   const uploadPdfToStorage = async (file: File, questId: string): Promise<string | null> => {
     try {
       setIsUploading(true);
-      
-      // Verificar se o bucket existe
-      const { data: buckets, error: bucketsError } = await supabase
-        .storage
-        .listBuckets();
-      
-      if (bucketsError) {
-        console.error('Erro ao listar buckets:', bucketsError);
-        throw new Error('Não foi possível acessar o Storage do Supabase');
-      }
-      
-      const questPdfsBucket = buckets.find(b => b.name === 'quest-pdfs');
-      
-      if (!questPdfsBucket) {
-        throw new Error('Bucket quest-pdfs não encontrado. Por favor, crie o bucket no Supabase Studio');
-      }
-      
-      console.log('Bucket encontrado:', questPdfsBucket);
-      
+
       // Criar um nome único para o arquivo
       const fileExt = file.name.split('.').pop();
       const fileName = `${questId}_${Date.now()}.${fileExt}`;
       const filePath = `${game.id}/${fileName}`;
-      
-      console.log('Tentando fazer upload para:', filePath);
-      
+
       // Upload do arquivo
       const { data, error } = await supabase.storage
         .from('quest-pdfs')
@@ -319,25 +299,24 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
           cacheControl: '3600',
           upsert: true
         });
-      
+
       if (error) {
-        console.error('Erro detalhado do upload:', JSON.stringify(error));
+        console.error('[uploadPdfToStorage] Erro detalhado do upload:', JSON.stringify(error, null, 2));
+        console.error('[uploadPdfToStorage] Mensagem de erro:', error.message);
         throw error;
       }
-      
-      console.log('Upload bem-sucedido:', data);
-      
+
       // Obter URL pública do arquivo
       const { data: publicUrlData } = supabase.storage
         .from('quest-pdfs')
         .getPublicUrl(filePath);
-      
+
       return publicUrlData.publicUrl;
     } catch (error: any) {
-      console.error('Erro ao fazer upload do PDF:', error?.message || JSON.stringify(error));
+      console.error('[uploadPdfToStorage] Erro geral na função:', error?.message || JSON.stringify(error));
       toast({
-        title: "Erro ao fazer upload",
-        description: error?.message || "Não foi possível enviar o arquivo PDF. Verifique as permissões do bucket.",
+        title: "Erro no Upload do PDF",
+        description: error?.message || "Não foi possível enviar o arquivo PDF.",
         variant: "destructive",
       });
       return null;
@@ -349,9 +328,10 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   
   // Modificar a função handleSaveQuest para incluir o upload do PDF
   const handleSaveQuest = async () => {
+    let equipes: { id: string }[] = [];
     try {
       setIsLoading(true);
-      
+
       // Validar campos
       if (!formData.titulo.trim()) {
         toast({
@@ -361,22 +341,14 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         });
         return;
       }
-      
+
       let pdfUrl = formData.arquivo_pdf;
-      
-      // Processar upload de PDF se um novo arquivo foi selecionado
-      if (pdfFile) {
-        // Para edição, precisamos do ID da quest; para criação, vamos fazer upload após criar
-        if (modalMode === 'edit' && selectedQuest) {
-          pdfUrl = await uploadPdfToStorage(pdfFile, selectedQuest.id);
-        }
-      }
-      
+
       // Garantir que game_id é sempre uma string válida
       if (!game.id) {
         throw new Error("ID do game não está disponível");
       }
-      
+
       const questData = {
         titulo: formData.titulo,
         descricao: formData.descricao,
@@ -386,101 +358,201 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
         data_fim: formData.data_fim || null,
         status: formData.status,
         game_id: game.id, // Aqui garantimos que game_id é uma string
-        arquivo_pdf: pdfUrl
+        // arquivo_pdf será atualizado depois, se necessário
       };
-      
+
       if (modalMode === 'create') {
-        // Criar nova quest
+        console.log('[handleSaveQuest - Create] Iniciando criação de quest.');
+        console.log('[handleSaveQuest - Create] Dados iniciais (sem PDF):', questData);
+
+        // 1. Criar nova quest
         const { data: novaQuest, error: questError } = await supabase
           .from('quests')
           .insert(questData)
           .select()
           .single();
-        
-        if (questError) throw questError;
-        
-        // Agora que temos o ID da quest, podemos fazer upload do PDF
-        if (pdfFile && novaQuest) {
-          const pdfUrl = await uploadPdfToStorage(pdfFile, novaQuest.id);
-          
-          // Atualizar a quest com a URL do PDF
+
+        if (questError) {
+          console.error('[handleSaveQuest - Create] Erro ao INSERIR quest:', questError);
+          throw questError;
+        }
+
+        console.log('[handleSaveQuest - Create] Quest inserida com sucesso, ID:', novaQuest.id);
+
+        // 2. Fazer upload do PDF APÓS criar a quest, se houver arquivo
+        if (pdfFile) {
+          console.log('[handleSaveQuest - Create] PDF selecionado. Iniciando upload para quest ID:', novaQuest.id);
+          pdfUrl = await uploadPdfToStorage(pdfFile, novaQuest.id);
+          console.log('[handleSaveQuest - Create] Resultado do uploadPdfToStorage:', pdfUrl);
+
+          // 3. Se o upload foi bem-sucedido, ATUALIZAR a quest com a URL
           if (pdfUrl) {
+            console.log('[handleSaveQuest - Create] Upload bem-sucedido. Tentando ATUALIZAR quest com URL:', pdfUrl);
             const { error: updateError } = await supabase
               .from('quests')
               .update({ arquivo_pdf: pdfUrl })
               .eq('id', novaQuest.id);
-              
+
             if (updateError) {
-              console.error('Erro ao atualizar a URL do PDF:', updateError);
+              console.error('[handleSaveQuest - Create] Erro ao ATUALIZAR quest com URL do PDF:', updateError);
+              toast({
+                title: "Erro ao salvar PDF",
+                description: `A quest foi criada, mas houve um erro ao salvar o arquivo PDF: ${updateError.message}`,
+                variant: "destructive",
+              });
+              // Mesmo com erro no PDF, a quest foi criada, então atualizamos localmente sem o PDF
+              novaQuest.arquivo_pdf = null; // Garante que o estado local reflete o DB
             } else {
-              // Atualizar o objeto local com a URL do PDF
-              novaQuest.arquivo_pdf = pdfUrl;
+              console.log('[handleSaveQuest - Create] Quest atualizada com sucesso com a URL do PDF.');
+              novaQuest.arquivo_pdf = pdfUrl; // Atualiza o objeto local
             }
+          } else {
+             console.warn('[handleSaveQuest - Create] Upload do PDF falhou ou foi cancelado (pdfUrl é null).');
+             toast({
+               title: "Aviso sobre PDF",
+               description: "A quest foi criada, mas o arquivo PDF não pôde ser salvo.",
+               variant: "default",
+             });
+             novaQuest.arquivo_pdf = null; // Garante que o estado local reflete o DB
           }
+        } else {
+           console.log('[handleSaveQuest - Create] Nenhum PDF selecionado.');
+           novaQuest.arquivo_pdf = null; // Garante que o estado local reflete o DB
         }
-        
-        // Buscar todas as equipes do game
-        const { data: equipes, error: equipesError } = await supabase
+
+        // 4. Buscar equipes e criar entradas em equipe_quests (REINTRODUZIDO)
+        console.log('[handleSaveQuest - Create] Buscando equipes do game ID:', game.id);
+        const { data: equipesData, error: equipesError } = await supabase
           .from('game_equipes')
           .select('id')
           .eq('game_id', game.id);
-        
-        if (equipesError) throw equipesError;
-        
-        if (equipes && equipes.length > 0) {
-          // Criar entradas na tabela equipe_quests para cada equipe
-          const equipeQuestsData = equipes.map(equipe => ({
-            equipe_id: equipe.id,
-            quest_id: novaQuest.id,
-            status: 'pendente'
-          }));
-          
-          const { error: equipeQuestsError } = await supabase
-            .from('equipe_quests')
-            .insert(equipeQuestsData);
-          
-          if (equipeQuestsError) throw equipeQuestsError;
+
+        if (equipesError) {
+            console.error('[handleSaveQuest - Create] Erro ao buscar equipes:', equipesError);
+            // Considerar se deve lançar o erro ou apenas logar e continuar
+            // throw equipesError;
+        } else {
+            equipes = equipesData || []; // Atribui a equipesData a 'equipes' no escopo superior
+            console.log(`[handleSaveQuest - Create] Encontradas ${equipes.length} equipes.`);
+            if (equipes.length > 0) {
+                console.log('[handleSaveQuest - Create] Criando entradas em equipe_quests...');
+                const equipeQuestsData = equipes.map(equipe => ({
+                    equipe_id: equipe.id,
+                    quest_id: novaQuest.id,
+                    status: 'pendente'
+                }));
+                const { error: equipeQuestsError } = await supabase
+                    .from('equipe_quests')
+                    .insert(equipeQuestsData);
+
+                if (equipeQuestsError) {
+                    console.error('[handleSaveQuest - Create] Erro ao inserir em equipe_quests:', equipeQuestsError);
+                    // Considerar notificar o usuário sobre essa falha específica
+                    toast({
+                        title: "Erro ao associar quest às equipes",
+                        description: equipeQuestsError.message,
+                        variant: "destructive",
+                    });
+                }
+                 console.log('[handleSaveQuest - Create] Entradas em equipe_quests criadas.');
+            }
         }
-        
-        // Adicionar à lista local
+
+        // 5. Adicionar à lista local
+        console.log('[handleSaveQuest - Create] Adicionando quest ao estado local:', novaQuest);
         setQuestsList(prevQuests => [...prevQuests, novaQuest as Quest]);
-        
+
         toast({
           title: "Quest criada",
-          description: `A quest "${novaQuest.titulo}" foi criada com sucesso para ${equipes ? equipes.length : 0} equipes.`,
+          description: `A quest "${novaQuest.titulo}" foi criada com sucesso para ${equipes.length} equipes.`, // Agora 'equipes' está definida
         });
+
       } else if (modalMode === 'edit' && selectedQuest) {
-        // Editar quest existente
+        console.log('[handleSaveQuest - Edit] Iniciando edição de quest ID:', selectedQuest.id);
+        const questUpdateData = {
+           ...questData,
+        };
+
+        console.log('[handleSaveQuest - Edit] Dados para update (sem PDF):', questUpdateData);
+        // 1. Editar quest existente (sem a URL do PDF ainda)
         const { error: updateError } = await supabase
           .from('quests')
-          .update(questData)
+          .update(questUpdateData)
           .eq('id', selectedQuest.id);
-        
-        if (updateError) throw updateError;
-        
-        // Atualizar a lista local
-        setQuestsList(prevQuests => 
-          prevQuests.map(q => 
-            q.id === selectedQuest.id 
-              ? { ...q, ...questData } as Quest
+
+        if (updateError) {
+           console.error('[handleSaveQuest - Edit] Erro ao ATUALIZAR quest (dados principais):', updateError);
+           throw updateError;
+        }
+        console.log('[handleSaveQuest - Edit] Dados principais da quest atualizados.');
+
+        let finalQuestData = { ...selectedQuest, ...questUpdateData } as Quest;
+
+        // 2. Fazer upload de novo PDF se houver
+        if (pdfFile) {
+            console.log('[handleSaveQuest - Edit] Novo PDF selecionado. Iniciando upload para quest ID:', selectedQuest.id);
+            pdfUrl = await uploadPdfToStorage(pdfFile, selectedQuest.id);
+            console.log('[handleSaveQuest - Edit] Resultado do uploadPdfToStorage:', pdfUrl);
+
+            // 3. Se o upload funcionou, ATUALIZAR SOMENTE O CAMPO PDF
+            if (pdfUrl) {
+                console.log('[handleSaveQuest - Edit] Upload bem-sucedido. Tentando ATUALIZAR campo PDF...');
+                const { error: pdfUpdateError } = await supabase
+                    .from('quests')
+                    .update({ arquivo_pdf: pdfUrl })
+                    .eq('id', selectedQuest.id);
+
+                if (pdfUpdateError) {
+                    console.error('[handleSaveQuest - Edit] Erro ao ATUALIZAR quest com URL do PDF:', pdfUpdateError);
+                    toast({
+                        title: "Erro ao salvar PDF",
+                        description: `A quest foi atualizada, mas houve um erro ao salvar o novo arquivo PDF: ${pdfUpdateError.message}`,
+                        variant: "destructive",
+                    });
+                    finalQuestData.arquivo_pdf = selectedQuest.arquivo_pdf; // Mantém o PDF antigo no estado local
+                } else {
+                     console.log('[handleSaveQuest - Edit] Campo PDF atualizado com sucesso.');
+                     finalQuestData.arquivo_pdf = pdfUrl; // Atualiza o objeto final com o novo PDF
+                }
+            } else {
+                console.warn('[handleSaveQuest - Edit] Upload do novo PDF falhou ou foi cancelado.');
+                 toast({
+                     title: "Aviso sobre PDF",
+                     description: "A quest foi atualizada, mas o novo arquivo PDF não pôde ser salvo.",
+                     variant: "default",
+                 });
+                 finalQuestData.arquivo_pdf = selectedQuest.arquivo_pdf; // Mantém o PDF antigo no estado local
+            }
+        } else {
+           // Se não houve novo upload, mantém o PDF existente (já está em finalQuestData via selectedQuest)
+           console.log('[handleSaveQuest - Edit] Nenhum novo PDF selecionado.');
+           finalQuestData.arquivo_pdf = selectedQuest.arquivo_pdf;
+        }
+
+        // 4. Atualizar a lista local
+        console.log('[handleSaveQuest - Edit] Atualizando quest no estado local:', finalQuestData);
+        setQuestsList(prevQuests =>
+          prevQuests.map(q =>
+            q.id === selectedQuest.id
+              ? finalQuestData
               : q
           )
         );
-        
+
         toast({
           title: "Quest atualizada",
           description: "Quest atualizada com sucesso!",
         });
       }
-      
+
       // Fechar o modal e resetar o formulário
       setShowModal(false);
       resetForm();
     } catch (error: any) {
-      console.error('Erro ao salvar quest:', error);
+      console.error('Erro geral em handleSaveQuest:', error);
       toast({
-        title: "Erro ao salvar",
-        description: error.message || "Ocorreu um erro ao salvar a quest.",
+        title: "Erro ao salvar Quest",
+        description: error.message || "Ocorreu um erro inesperado.",
         variant: "destructive",
       });
     } finally {
