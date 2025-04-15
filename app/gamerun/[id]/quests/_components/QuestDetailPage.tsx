@@ -16,11 +16,18 @@ import {
   Bookmark,
   FileText,
   Download,
-  Lock as LockIcon
+  Lock as LockIcon,
+  Send,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { createClientSupabaseClient } from '@/lib/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Game {
   id: string;
@@ -61,6 +68,8 @@ interface QuestProgress {
   progresso?: number;
   data_conclusao?: string | null;
   pontos_obtidos?: number;
+  resposta?: string | null;
+  data_resposta?: string | null;
 }
 
 interface QuestDetailPageProps {
@@ -79,7 +88,12 @@ export default function QuestDetailPage({
   questProgress
 }: QuestDetailPageProps) {
   const router = useRouter();
+  const { toast } = useToast();
+  const supabase = createClientSupabaseClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [respostaInput, setRespostaInput] = useState('');
+  const [mostrarResposta, setMostrarResposta] = useState(false);
+  const [enviandoResposta, setEnviandoResposta] = useState(false);
   
   // Formatar data
   const formatarData = (dataString: string | null) => {
@@ -132,6 +146,81 @@ export default function QuestDetailPage({
     }
   };
   
+  // Função para enviar resposta
+  const handleEnviarResposta = async () => {
+    // Log IDs ANTES de usar, para garantir que não são undefined/null
+    console.log(`[handleEnviarResposta] Verificando IDs - Equipe: ${equipe?.id}, Quest: ${quest?.id}`);
+
+    if (!equipe || !quest || !equipe.id || !quest.id || !respostaInput.trim()) {
+        console.error('[handleEnviarResposta] Condições de envio não atendidas:', { hasEquipe: !!equipe, hasQuest: !!quest, equipeId: equipe?.id, questId: quest?.id, hasResposta: !!respostaInput.trim() });
+        toast({
+            title: "Erro",
+            description: "Não foi possível determinar a equipe ou a quest para enviar a resposta.",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    setEnviandoResposta(true);
+    try {
+      const updateData = {
+        resposta: respostaInput.trim(),
+        status: 'respondido', // Novo status
+        data_resposta: new Date().toISOString(), // Data/hora atual
+      };
+
+      console.log('[handleEnviarResposta] Enviando atualização para equipe_quests:', updateData);
+      console.log(`[handleEnviarResposta] Usando match com equipe_id: ${equipe.id}, quest_id: ${quest.id}`);
+
+      // Executar o update e LOGAR o resultado (data e error)
+      const { data: updateResultData, error: updateError } = await supabase
+        .from('equipe_quests')
+        .update(updateData)
+        .match({ equipe_id: equipe.id, quest_id: quest.id })
+        .select(); // Adicionar .select() para ver a linha atualizada (ou null se não encontrou/atualizou)
+
+      // Log detalhado do resultado da operação UPDATE
+      console.log('[handleEnviarResposta] Resultado da operação Supabase Update:', { updateResultData, updateError });
+
+      if (updateError) {
+        console.error('[handleEnviarResposta] Erro retornado pelo Supabase ao enviar resposta:', updateError);
+        throw updateError; // Lança o erro para o catch block
+      }
+
+      // Verificar se alguma linha foi realmente atualizada
+      // Se .select() retorna um array vazio ou null, a linha não foi encontrada pelo .match()
+      if (!updateResultData || updateResultData.length === 0) {
+          console.warn('[handleEnviarResposta] Supabase update não retornou dados. A linha pode não ter sido encontrada pelo .match().');
+          toast({
+            title: "Aviso",
+            description: "A resposta foi processada, mas não foi possível confirmar a atualização no banco. Verifique o status da quest.",
+            variant: "default",
+          });
+          // Ainda assim, fazemos refresh para buscar o estado real do banco
+          router.refresh();
+      } else {
+          console.log('[handleEnviarResposta] Resposta atualizada com sucesso no banco:', updateResultData);
+          toast({
+            title: "Resposta enviada!",
+            description: "Sua resposta foi registrada com sucesso.",
+          });
+          setRespostaInput(''); // Limpar input após sucesso
+          router.refresh(); // Atualizar dados da página
+      }
+
+    } catch (error: any) {
+      // O catch agora pegará erros lançados explicitamente
+      console.error('[handleEnviarResposta] Falha no bloco try/catch ao enviar resposta:', error);
+      toast({
+        title: "Erro ao enviar resposta",
+        description: error.message || "Não foi possível salvar sua resposta. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoResposta(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Cabeçalho */}
@@ -208,24 +297,17 @@ export default function QuestDetailPage({
             
             {/* PDF */}
             {quest.arquivo_pdf && (
-              <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex items-center mb-2">
-                  <FileText className="h-5 w-5 text-blue-600 mr-2" />
-                  <h3 className="font-semibold text-blue-800">Documento Complementar</h3>
-                </div>
-                <p className="text-sm text-blue-700 mb-3">
-                  Esta quest possui um documento PDF com informações adicionais.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button 
-                    onClick={() => window.open(quest.arquivo_pdf!, '_blank')}
-                    variant="outline"
-                    className="bg-white"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Visualizar PDF
-                  </Button>
-                </div>
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Documento de Apoio</h3>
+                <a 
+                  href={quest.arquivo_pdf} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-primary-600 hover:text-primary-700 underline"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  <span>Visualizar PDF da Quest</span>
+                </a>
               </div>
             )}
             
@@ -291,6 +373,81 @@ export default function QuestDetailPage({
                 >
                   Ver detalhes do Game
                 </Button>
+              </div>
+            )}
+
+            {/* Seção de Resposta */}
+            {equipe && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                {questProgress?.status !== 'respondido' && questProgress?.status !== 'concluida' && (
+                  <Card className="bg-gray-50 border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-xl">Sua Resposta</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label htmlFor="resposta-input" className="sr-only">Resposta</Label>
+                        <Input
+                          id="resposta-input"
+                          type="text"
+                          placeholder="Digite sua resposta aqui..."
+                          value={respostaInput}
+                          onChange={(e) => setRespostaInput(e.target.value)}
+                          disabled={enviandoResposta}
+                          className="bg-white"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleEnviarResposta} 
+                        disabled={enviandoResposta || !respostaInput.trim()}
+                        className="w-full sm:w-auto"
+                      >
+                        {enviandoResposta ? (
+                          <><Clock className="animate-spin h-4 w-4 mr-2" /> Enviando...</>
+                        ) : (
+                          <><Send className="h-4 w-4 mr-2" /> Enviar Resposta</>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {questProgress?.status === 'respondido' && (
+                   <Card className="bg-green-50 border-green-200">
+                    <CardHeader>
+                      <CardTitle className="text-xl text-green-800">Resposta Enviada</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <Label htmlFor="resposta-enviada" className="block text-sm font-medium text-green-700 mb-1">Sua resposta:</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            id="resposta-enviada"
+                            readOnly
+                            type={mostrarResposta ? 'text' : 'password'}
+                            value={questProgress.resposta || ''}
+                            className="flex-1 bg-white"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setMostrarResposta(!mostrarResposta)}
+                            aria-label={mostrarResposta ? "Ocultar resposta" : "Mostrar resposta"}
+                            className="border-gray-300 bg-white"
+                          >
+                            {mostrarResposta ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      {questProgress.data_resposta && (
+                        <p className="text-sm text-green-600">
+                          Enviada em: {formatarData(questProgress.data_resposta)}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </CardContent>

@@ -17,7 +17,8 @@ import {
   Check, 
   X,
   FileText,
-  Upload
+  Upload,
+  RefreshCw
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -87,6 +88,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [selectedTabKey, setSelectedTabKey] = useState<string>("todas");
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -608,6 +610,105 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     router.push(`/admin/games/${game.id}/quests/${questId}/edit` as any);
   };
   
+  // Função de Sincronização
+  async function handleSyncEquipeQuests() {
+    setIsSyncing(true);
+    // console.log('[handleSyncEquipeQuests] Iniciando sincronização...');
+
+    try {
+      // 1. Buscar IDs das Quests do Jogo
+      // console.log('[handleSyncEquipeQuests] Buscando quests...');
+      const { data: gameQuestsData, error: questsError } = await supabase
+        .from('quests')
+        .select('id')
+        .eq('game_id', game.id)
+        .in('status', ['ativo', 'pendente']);
+      
+      if (questsError) throw questsError;
+      const gameQuestIds = gameQuestsData?.map(q => q.id) || [];
+      // console.log(`[handleSyncEquipeQuests] Encontradas ${gameQuestIds.length} quests.`);
+
+      // 2. Buscar IDs das Equipes Ativas do Jogo
+      // console.log('[handleSyncEquipeQuests] Buscando equipes ativas...');
+      const { data: activeTeamsData, error: teamsError } = await supabase
+        .from('game_equipes')
+        .select('id')
+        .eq('game_id', game.id)
+        .eq('status', 'ativa');
+      
+      if (teamsError) throw teamsError;
+      const activeTeamIds = activeTeamsData?.map(t => t.id) || [];
+      // console.log(`[handleSyncEquipeQuests] Encontradas ${activeTeamIds.length} equipes ativas.`);
+
+      if (gameQuestIds.length === 0 || activeTeamIds.length === 0) {
+        // console.log('[handleSyncEquipeQuests] Nenhuma quest ou equipe ativa encontrada. Nada a sincronizar.');
+        toast({ title: "Sincronização", description: "Nenhuma quest ou equipe ativa para sincronizar." });
+        setIsSyncing(false);
+        return;
+      }
+
+      // 3. Buscar Pares Existentes
+      // console.log('[handleSyncEquipeQuests] Buscando registros existentes em equipe_quests...');
+      const { data: existingEquipeQuests, error: existingError } = await supabase
+        .from('equipe_quests')
+        .select('equipe_id, quest_id')
+        .in('quest_id', gameQuestIds);
+      
+      if (existingError) throw existingError;
+      // console.log(`[handleSyncEquipeQuests] Encontrados ${existingEquipeQuests?.length || 0} registros existentes.`);
+
+      // 4. Identificar Registros Faltantes
+      const existingPairs = new Set(existingEquipeQuests?.map(eq => `${eq.equipe_id}-${eq.quest_id}`) || []);
+      const recordsToCreate: { equipe_id: string; quest_id: string; status: string }[] = [];
+
+      for (const questId of gameQuestIds) {
+        for (const teamId of activeTeamIds) {
+          const pairKey = `${teamId}-${questId}`;
+          if (!existingPairs.has(pairKey)) {
+            recordsToCreate.push({
+              equipe_id: teamId,
+              quest_id: questId,
+              status: 'pendente'
+            });
+          }
+        }
+      }
+      // console.log(`[handleSyncEquipeQuests] Identificados ${recordsToCreate.length} registros faltantes.`);
+
+      // 5. Criar Registros Faltantes
+      if (recordsToCreate.length > 0) {
+        // console.log('[handleSyncEquipeQuests] Inserindo registros faltantes...');
+        const { error: insertError } = await supabase
+          .from('equipe_quests')
+          .insert(recordsToCreate);
+        
+        if (insertError) {
+          console.error('[handleSyncEquipeQuests] Erro no batch insert:', insertError); // Manter erro
+          throw insertError;
+        }
+        
+        toast({ 
+          title: "Sincronização Concluída", 
+          description: `${recordsToCreate.length} registro(s) de quest/equipe criado(s) com sucesso.`
+        });
+      } else {
+        // console.log('[handleSyncEquipeQuests] Nenhum registro faltante encontrado. Tudo sincronizado.');
+        toast({ title: "Sincronização", description: "Todas as quests e equipes ativas já estavam sincronizadas." });
+      }
+
+    } catch (error: any) {
+      console.error('[handleSyncEquipeQuests] Erro durante a sincronização:', error); // Manter erro
+      toast({ 
+        title: "Erro na Sincronização", 
+        description: error.message || "Não foi possível concluir a sincronização.", 
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncing(false);
+      // console.log('[handleSyncEquipeQuests] Sincronização finalizada.');
+    }
+  }
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex items-center justify-between">
@@ -641,8 +742,19 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
           
           <button
             type="button"
+            onClick={handleSyncEquipeQuests}
+            disabled={isLoading || isSyncing}
+            className={`flex items-center rounded-md border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-700 shadow-sm hover:bg-blue-50 focus:outline-none transition-colors ${isSyncing ? 'opacity-75 cursor-not-allowed' : ''}`}
+          >
+            <RefreshCw className={`mr-2 h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Equipes/Quests'}
+          </button>
+          
+          <button
+            type="button"
             onClick={handleOpenCreateModal}
-            className="flex items-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
+            disabled={isLoading || isSyncing}
+            className="flex items-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
           >
             <PlusIcon className="mr-2 h-5 w-5" />
             Nova Quest
