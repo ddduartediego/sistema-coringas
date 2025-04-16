@@ -18,7 +18,8 @@ import {
   X,
   FileText,
   Upload,
-  RefreshCw
+  RefreshCw,
+  ClipboardCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -1145,26 +1146,24 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                    <DropdownMenuLabel>Ações da Quest</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push(`/admin/games/${game.id}/quests/${quest.id}/evaluate` as any)}>
+                      <ClipboardCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                      Verificar Respostas
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleEditQuestPage(quest.id)}>
-                      <EditIcon className="mr-2 h-4 w-4" />
-                      Editar
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar Quest
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleVisibility(quest)}>
                       {quest.visivel ? (
-                        <>
-                          <EyeOff className="mr-2 h-4 w-4" />
-                          Tornar oculta
-                        </>
+                        <><EyeOff className="mr-2 h-4 w-4" /> Ocultar</>
                       ) : (
-                        <>
-                          <Eye className="mr-2 h-4 w-4" />
-                          Tornar visível
-                        </>
+                        <><Eye className="mr-2 h-4 w-4" /> Tornar Visível</>
                       )}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     {quest.status === 'pendente' && (
                       <DropdownMenuItem onClick={() => changeStatus(quest, 'ativo')}>
                         <Check className="mr-2 h-4 w-4 text-green-600" />
@@ -1195,7 +1194,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                       className="text-red-600 focus:text-red-700"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
+                      Excluir Quest
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
