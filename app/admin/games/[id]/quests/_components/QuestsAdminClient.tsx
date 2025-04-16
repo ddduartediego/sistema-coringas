@@ -19,7 +19,9 @@ import {
   FileText,
   Upload,
   RefreshCw,
-  ClipboardCheck
+  ClipboardCheck,
+  Edit as EditIconLucide,
+  Trophy
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -712,7 +714,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Quests do Game</h1>
           <p className="mt-1 text-gray-600">
@@ -731,14 +733,14 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
           </p>
         </div>
         
-        <div className="flex space-x-4">
+        <div className="flex flex-wrap items-center space-x-2 md:space-x-4 gap-y-2">
           <button
             type="button"
-            onClick={() => router.push(`/admin/games/${game.id}` as any)}
+            onClick={() => router.push(`/gamerun-admin`)}
             className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none"
           >
             <ArrowLeft className="mr-2 h-5 w-5" />
-            Voltar para o Game
+            Voltar
           </button>
           
           <button
@@ -749,6 +751,16 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
           >
             <RefreshCw className={`mr-2 h-5 w-5 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Sincronizando...' : 'Sincronizar Equipes/Quests'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => router.push(`/admin/games/${game.id}/ranking` as any)}
+            disabled={isLoading || isSyncing}
+            className="flex items-center rounded-md border border-amber-500 bg-white px-4 py-2 text-sm font-medium text-amber-700 shadow-sm hover:bg-amber-50 focus:outline-none transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+          >
+            <Trophy className="mr-2 h-5 w-5" />
+            Ver Ranking
           </button>
           
           <button
@@ -1131,8 +1143,8 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
     return (
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {quests.map(quest => (
-          <div key={quest.id} className="bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="p-5">
+          <div key={quest.id} className="bg-white overflow-hidden rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+            <div className="p-5 flex-grow">
               <div className="flex justify-between items-start mb-3">
                 <h3 className="text-lg font-semibold text-gray-900 leading-tight">
                   {quest.numero && <span className="mr-1 text-gray-500">#{quest.numero}</span>}
@@ -1154,7 +1166,7 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleEditQuestPage(quest.id)}>
-                      <Edit className="mr-2 h-4 w-4" />
+                      <EditIconLucide className="mr-2 h-4 w-4" />
                       Editar Quest
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleVisibility(quest)}>
@@ -1257,12 +1269,22 @@ export default function QuestsAdminClient({ game, quests }: QuestsAdminClientPro
               </div>
             </div>
             
-            <div className="bg-gray-50 px-5 py-3 text-right">
+            {/* Footer com botões */}
+            <div className="bg-gray-50 px-5 py-3 flex justify-end items-center space-x-2">
+              {/* Botão Verificar Respostas (NOVO) */}
+              <button
+                onClick={() => router.push(`/admin/games/${game.id}/quests/${quest.id}/evaluate` as any)}
+                className="inline-flex items-center rounded-md border border-indigo-300 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 focus:outline-none transition-colors"
+              >
+                <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
+                Verificar Respostas
+              </button>
+              {/* Botão Editar Quest (Existente) */}
               <button
                 onClick={() => handleEditQuestPage(quest.id)}
-                className="inline-flex items-center rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none transition-colors"
+                className="inline-flex items-center rounded-md border border-primary-300 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 shadow-sm hover:bg-primary-50 focus:outline-none transition-colors"
               >
-                <EditIcon className="mr-1.5 h-3.5 w-3.5" fontSize="small" />
+                <EditIconLucide className="mr-1.5 h-3.5 w-3.5" />
                 Editar Quest
               </button>
             </div>

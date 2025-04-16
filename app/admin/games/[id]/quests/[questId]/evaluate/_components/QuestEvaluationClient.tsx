@@ -288,7 +288,16 @@ export default function QuestEvaluationClient({ quest, teamResponses, gameId }: 
                                             <TableCell className="font-medium text-gray-800">{tr.game_equipes?.nome || 'Equipe desconhecida'}</TableCell>
                                             <TableCell>{renderStatusBadge(tr.status)}</TableCell>
                                             <TableCell>{renderAvaliacaoBadge(tr.avaliacao)}</TableCell>
-                                            <TableCell className="max-w-xs truncate text-gray-600" title={tr.resposta || ''}>{tr.resposta || '-'}</TableCell>
+                                            <TableCell className="max-w-xs" title={tr.resposta || '-'}>
+                                                <div className="flex items-center justify-start space-x-2">
+                                                    <span className="truncate text-gray-600">{tr.resposta || '-'}</span>
+                                                    {tr.resposta && quest.chave && tr.resposta.trim() && quest.chave.trim() && (
+                                                        tr.resposta.trim().toLowerCase() === quest.chave.trim().toLowerCase()
+                                                            ? <Check className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                                            : <X className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="text-sm text-gray-600">{formatarData(tr.data_resposta)}</TableCell>
                                             <TableCell className="text-right">
                                                 {tr.status === 'respondido' && (
