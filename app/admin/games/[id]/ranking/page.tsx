@@ -136,13 +136,12 @@ export default async function GameRankingPage({
             // Considera pontos apenas se avaliada como 'certo'
             if (tq.avaliacao === 'certo') {
                 totalPontos += tq.pontos_obtidos || 0;
-                // Considera concluída se status for concluida E avaliada como certo
-                if(tq.status === 'concluida') {
-                    questsConcluidas++;
-                }
             }
-            // Você poderia adicionar lógica aqui se quisesse contar 'concluida' mesmo se 'errado',
-            // mas baseado na descrição anterior, contamos apenas as corretas.
+            
+            // *** AJUSTE: Conta como concluída se o status for 'concluida', independente da avaliação ***
+            if(tq.status === 'concluida') {
+                questsConcluidas++;
+            }
         });
 
         return {
