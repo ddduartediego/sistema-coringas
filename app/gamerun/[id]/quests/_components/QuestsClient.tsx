@@ -84,18 +84,26 @@ interface Equipe {
   lider_id: string;
 }
 
+interface QuestProgress {
+  quest_id: string;
+  status: string;
+  data_inicio?: string | null;
+}
+
 interface QuestsClientProps {
   gameId: string;
   equipe: Equipe;
   quests: Quest[];
   profileId: string;
+  questProgressList: QuestProgress[];
 }
 
 export default function QuestsClient({ 
   gameId, 
   equipe, 
   quests, 
-  profileId 
+  profileId, 
+  questProgressList 
 }: QuestsClientProps) {
   const [questsVisiveis, setQuestsVisiveis] = useState<Quest[]>([]);
   const [isLider, setIsLider] = useState<boolean>(false);
@@ -197,6 +205,31 @@ export default function QuestsClient({
     }
   };
   
+  // *** FUNÇÕES AUXILIARES PARA STATUS (semelhantes a QuestDetailPage) ***
+  const getQuestStatusForTeam = (questId: string): string => {
+    const progress = questProgressList.find(p => p.quest_id === questId);
+    if (!progress) return 'Pendente';
+    switch (progress.status) {
+      case 'concluida': return 'Concluída';
+      case 'em_progresso': return 'Em Progresso';
+      case 'respondido': return 'Respondido';
+      case 'pendente':
+      default: return 'Pendente';
+    }
+  };
+  
+  const getStatusBadgeClasses = (questId: string): string => {
+    const progress = questProgressList.find(p => p.quest_id === questId);
+    const status = progress ? progress.status : 'pendente';
+    switch (status) {
+      case 'concluida': return 'bg-green-100 text-green-800';
+      case 'em_progresso': return 'bg-blue-100 text-blue-800';
+      case 'respondido': return 'bg-orange-100 text-orange-800';
+      case 'pendente':
+      default: return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 rounded-lg bg-blue-50 p-6 shadow-sm">
@@ -233,172 +266,110 @@ export default function QuestsClient({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {questsVisiveis.map((quest, index) => (
-            <motion.div
-              key={quest.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition hover:shadow-lg"
-            >
-              {/* Número da Quest e Ações */}
-              <div className="flex justify-between items-center p-4">
-                <div className="flex items-center">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white shadow-md mr-2">
-                    #{quest.numero || '?'}
-                  </span>
-                  <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{quest.titulo}</h3>
-                </div>
-                
-                {/* Dropdown menu de ações */}
-                <div className="relative z-30">
-                  <button
-                    onClick={(e) => toggleDropdown(e, quest.id)}
-                    className="p-1.5 rounded-full hover:bg-gray-100 focus:outline-none"
-                  >
-                    <MoreHorizontal className="h-5 w-5 text-gray-500" />
-                  </button>
-                  
-                  <DropdownMenu isOpen={openDropdownId === quest.id}>
-                    <div className="py-1 shadow-lg">
-                      <div className="px-4 py-2 text-sm font-medium border-b border-gray-100 bg-gray-50">
-                        Ações
-                      </div>
-                      
-                      {isLider && (
-                        <>
-                          <DropdownMenuItem 
-                            onClick={() => router.push(`/gamerun/${gameId}/quests/${quest.id}/edit`)}
-                            icon={<Edit className="h-4 w-4 text-gray-600" />}
-                          >
-                            Editar
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            onClick={() => console.log('Tornar oculta', quest.id)}
-                            icon={<EyeOff className="h-4 w-4 text-gray-600" />}
-                          >
-                            Tornar oculta
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            onClick={() => console.log('Inativar', quest.id)}
-                            icon={<X className="h-4 w-4 text-gray-600" />}
-                          >
-                            Inativar
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem 
-                            onClick={() => console.log('Finalizar', quest.id)}
-                            icon={<CheckSquare className="h-4 w-4 text-blue-600" />}
-                            className="border-b border-gray-100"
-                          >
-                            Finalizar
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          router.push(`/gamerun/${gameId}/quests/${quest.id}`);
-                        }}
-                        icon={<Bookmark className="h-4 w-4 text-primary-600" />}
-                      >
-                        Ver Detalhes
-                      </DropdownMenuItem>
-                      
-                      {isLider && (
-                        <DropdownMenuItem 
-                          onClick={() => console.log('Excluir', quest.id)}
-                          icon={<Trash2 className="h-4 w-4" />}
-                          className="text-red-600 border-t border-gray-100"
-                        >
-                          Excluir
-                        </DropdownMenuItem>
-                      )}
-                    </div>
-                  </DropdownMenu>
-                </div>
-              </div>
-              
-              {/* Status Badge */}
-              <div className="px-4 flex flex-wrap gap-2 mb-3">
-                <span className="inline-flex rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-800">
-                  {quest.status === 'ativo' ? 'Ativa' : quest.status}
-                </span>
-                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800">
-                  {getQuestTypeIcon(quest.tipo)}
-                  <span className="ml-1.5">{quest.tipo === 'regular' ? 'Regular' : quest.tipo || 'Regular'}</span>
-                </span>
-                {quest.visivel && (
-                  <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-indigo-100 text-indigo-800">
-                    Visível
-                  </span>
-                )}
-              </div>
-              
-              {/* Conteúdo */}
-              <div className="flex flex-1 flex-col px-4 pb-4">
-                {quest.descricao && quest.descricao !== quest.titulo && (
-                  <div className="prose prose-sm prose-primary mb-4 max-h-24 overflow-hidden">
-                    <div 
-                      dangerouslySetInnerHTML={{ 
-                        __html: quest.descricao.length > 300 
-                          ? quest.descricao.substring(0, 300) + '...' 
-                          : quest.descricao 
-                      }} 
-                    />
-                  </div>
-                )}
-                
-                <div className="mt-auto space-y-3">
-                  {/* Pontos ou Cadeado */}
+          {questsVisiveis.map((quest, index) => {
+            // *** ENCONTRAR STATUS DA EQUIPE ***
+            const teamStatus = getQuestStatusForTeam(quest.id);
+            const statusBadgeClasses = getStatusBadgeClasses(quest.id);
+
+            return (
+              <motion.div
+                key={quest.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition hover:shadow-lg"
+              >
+                {/* Número da Quest e Ações */}
+                <div className="flex justify-between items-center p-4">
                   <div className="flex items-center">
-                    <Award className="h-3.5 w-3.5 mr-1" />
-                    <span>
-                      Pontos: {quest.tipo === 'cadeado' ? (
-                        <LockIcon className="h-3.5 w-3.5 inline-block align-middle text-gray-500 ml-1" />
-                      ) : (
-                        <span className="font-medium text-gray-700">{quest.pontos}</span>
-                      )}
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white shadow-md mr-2">
+                      #{quest.numero || '?'}
                     </span>
+                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{quest.titulo}</h3>
                   </div>
                   
-                  {/* Data de Início */}
-                  {quest.data_inicio && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-blue-50">
-                        <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
-                      </span>
-                      <span>Início: {formatarData(quest.data_inicio)}</span>
+                  {/* *** EXIBIR BADGE DE STATUS DA EQUIPE *** */}
+                  <span className={`ml-auto rounded px-2 py-0.5 text-xs font-medium ${statusBadgeClasses}`}>
+                    {teamStatus}
+                  </span>
+                </div>
+                
+                {/* Status Badge */}
+                <div className="px-4 flex flex-wrap gap-2 mb-3">
+                  <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                    {getQuestTypeIcon(quest.tipo)}
+                    <span className="ml-1.5">{quest.tipo === 'regular' ? 'Regular' : quest.tipo || 'Regular'}</span>
+                  </span>
+                  {quest.visivel && (
+                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-indigo-100 text-indigo-800">
+                      Visível
+                    </span>
+                  )}
+                </div>
+                
+                {/* Conteúdo */}
+                <div className="flex flex-1 flex-col px-4 pb-4">
+                  {quest.descricao && quest.descricao !== quest.titulo && (
+                    <div className="prose prose-sm prose-primary mb-4 max-h-24 overflow-hidden">
+                      <div 
+                        dangerouslySetInnerHTML={{ 
+                          __html: quest.descricao.length > 300 
+                            ? quest.descricao.substring(0, 300) + '...' 
+                            : quest.descricao 
+                        }} 
+                      />
                     </div>
                   )}
                   
-                  {/* Data Limite / Countdown */}
-                  {quest.data_fim && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-amber-50">
-                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  <div className="mt-auto space-y-3">
+                    {/* Pontos ou Cadeado */}
+                    <div className="flex items-center">
+                      <Award className="h-3.5 w-3.5 mr-1" />
+                      <span>
+                        Pontos: {quest.tipo === 'cadeado' ? (
+                          <LockIcon className="h-3.5 w-3.5 inline-block align-middle text-gray-500 ml-1" />
+                        ) : (
+                          <span className="font-medium text-gray-700">{quest.pontos}</span>
+                        )}
                       </span>
-                      <span>Prazo: {calcularTempoRestante(quest.data_fim)}  ({formatarData(quest.data_fim)})</span>
                     </div>
-                  )}
-                  
-                  {/* Botão Ver Detalhes */}
-                  <div className="flex pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/gamerun/${gameId}/quests/${quest.id}`)}
-                      className="border-primary-300 text-primary-700 hover:bg-primary-50"
-                    >
-                      Ver Detalhes
-                    </Button>
+                    
+                    {/* Data de Início */}
+                    {quest.data_inicio && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-blue-50">
+                          <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
+                        </span>
+                        <span>Início: {formatarData(quest.data_inicio)}</span>
+                      </div>
+                    )}
+                    
+                    {/* Data Limite / Countdown */}
+                    {quest.data_fim && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span className="inline-flex items-center justify-center mr-2 h-5 w-5 rounded-full bg-amber-50">
+                          <Clock className="h-3.5 w-3.5 text-amber-600" />
+                        </span>
+                        <span>Prazo: {calcularTempoRestante(quest.data_fim)}  ({formatarData(quest.data_fim)})</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+
+                {/* Rodapé com Botão */}
+                <div className="border-t border-gray-200 bg-gray-50/50 p-4">
+                  <Link href={`/gamerun/${gameId}/quests/${quest.id}`} className="block w-full">
+                    <Button variant="outline" className="w-full bg-white hover:bg-gray-100">
+                      Ver Detalhes
+                      {/* Ícone opcional indicando status? */}
+                      {teamStatus === 'em_progresso' && <Clock className="ml-2 h-4 w-4 text-blue-600" />}
+                      {teamStatus === 'Concluída' && <CheckCircle className="ml-2 h-4 w-4 text-green-600" />}
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -217,11 +217,38 @@ export default async function QuestsPage({
       // Garantir que todas as quests tenham as propriedades requeridas
       const quests = questsData?.map(quest => ({
         ...quest,
-        visivel: quest.visivel !== undefined ? quest.visivel : true,
+        visivel: quest.visivel ?? false,
         numero: quest.numero !== undefined ? quest.numero : null
       })) || [];
       
       console.log("QuestsPage: Quests encontradas:", quests?.length || 0);
+      
+      // *** NOVA BUSCA: Buscar progresso da equipe nas quests ***
+      let questProgressList: QuestProgress[] = [];
+      if (equipe && quests && quests.length > 0) {
+        const questIds = quests.map(q => q.id);
+        console.log(`QuestsPage: Buscando progresso para equipe ${equipe.id} e ${questIds.length} quests.`);
+        const { data: progressData, error: progressError } = await supabase
+          .from('equipe_quests')
+          .select('quest_id, status, data_inicio') // Incluir data_inicio se quisermos usar depois
+          .eq('equipe_id', equipe.id)
+          .in('quest_id', questIds);
+          
+        if (progressError) {
+          console.error("QuestsPage: Erro ao buscar progresso das quests:", progressError);
+          // Não lançar erro, podemos continuar sem os status individuais
+        } else {
+          questProgressList = progressData || [];
+          console.log("QuestsPage: Progresso encontrado:", questProgressList.length);
+        }
+      }
+      
+      // Definir interface QuestProgress (pode ser movida para um arquivo de tipos)
+      interface QuestProgress {
+        quest_id: string;
+        status: string;
+        data_inicio?: string | null;
+      }
       
       return (
         <Suspense fallback={<div>Carregando missões...</div>}>
@@ -231,6 +258,7 @@ export default async function QuestsPage({
               equipe={equipe}
               quests={quests}
               profileId={profile.id}
+              questProgressList={questProgressList} // Passar a nova prop
             />
           </div>
         </Suspense>

@@ -150,6 +150,70 @@ export default function QuestDetailPage({
     }
   };
   
+  // Função para lidar com o clique no link do PDF
+  const handleVisualizarPdfClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault(); // Prevenir a navegação padrão do link
+
+    if (!equipe || !quest?.arquivo_pdf) {
+      console.error('[handleVisualizarPdfClick] Equipe ou URL do PDF não disponíveis.');
+      toast({
+        title: "Erro",
+        description: "Não foi possível obter as informações da equipe ou o link do PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true); // Indicar carregamento/processamento
+
+    try {
+      // Verificar o status atual ANTES de tentar atualizar
+      // Usamos o questProgress passado como prop, que deve ter o status atual
+      if (questProgress?.status === 'pendente') {
+        console.log(`[handleVisualizarPdfClick] Status atual é 'pendente'. Tentando atualizar para 'em_progresso' para equipe ${equipe.id} e quest ${quest.id}...`);
+        
+        const { error: updateError } = await supabase
+          .from('equipe_quests')
+          .update({ 
+            status: 'em_progresso', 
+            data_inicio: new Date().toISOString() 
+          })
+          .match({ equipe_id: equipe.id, quest_id: quest.id });
+
+        if (updateError) {
+          console.error('[handleVisualizarPdfClick] Erro ao atualizar status/data_inicio:', updateError);
+          // Não lançar erro aqui, pois queremos abrir o PDF mesmo se a atualização falhar
+          toast({
+            title: "Aviso",
+            description: `Não foi possível marcar a quest como "Em Progresso" (${updateError.message}). Verifique suas permissões ou tente novamente mais tarde.`,
+            variant: "default", // Usar default para não ser muito alarmante
+          });
+        } else {
+          console.log('[handleVisualizarPdfClick] Status e data_inicio atualizados com sucesso.');
+          // Opcional: Forçar refresh para buscar o novo estado? Pode ser pesado.
+          // router.refresh(); 
+          // Por ora, vamos confiar que a exibição será atualizada na próxima carga ou ao navegar.
+        }
+      } else {
+        console.log(`[handleVisualizarPdfClick] Status atual não é 'pendente' (${questProgress?.status}). Nenhuma atualização realizada.`);
+      }
+
+      // Abrir o PDF em uma nova aba, independentemente do sucesso da atualização
+      console.log(`[handleVisualizarPdfClick] Abrindo PDF: ${quest.arquivo_pdf}`);
+      window.open(quest.arquivo_pdf, '_blank', 'noopener,noreferrer');
+
+    } catch (err) {
+      console.error('[handleVisualizarPdfClick] Erro inesperado:', err);
+      toast({
+        title: "Erro Inesperado",
+        description: "Ocorreu um erro ao tentar processar a visualização do PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false); // Finalizar indicação de carregamento
+    }
+  };
+
   // Função para enviar resposta
   const handleEnviarResposta = async () => {
     // Log IDs ANTES de usar, para garantir que não são undefined/null
@@ -299,18 +363,18 @@ export default function QuestDetailPage({
               )}
             </div>
             
-            {/* PDF */}
+            {/* PDF - MODIFICADO */}
             {quest.arquivo_pdf && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Documento de Apoio</h3>
                 <a 
-                  href={quest.arquivo_pdf} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-primary-600 hover:text-primary-700 underline"
+                  href={quest.arquivo_pdf} // Manter href para acessibilidade e fallback
+                  onClick={handleVisualizarPdfClick} // Adicionar onClick
+                  className={`inline-flex items-center text-primary-600 hover:text-primary-700 underline ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  aria-disabled={isLoading} // Indicar estado de carregamento para leitores de tela
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  <span>Visualizar PDF da Quest</span>
+                  <FileText className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>{isLoading ? 'Processando...' : 'Visualizar PDF da Quest'}</span>
                 </a>
               </div>
             )}
