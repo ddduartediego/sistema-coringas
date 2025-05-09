@@ -42,6 +42,10 @@ interface EstatisticasType {
     doadores: number;
     podemDoar: number;
   };
+  camisetas: {
+    preenchido: number;
+    incompleto: number;
+  };
 }
 
 export default function LiderancaPage() {
@@ -55,6 +59,10 @@ export default function LiderancaPage() {
       naoDoadores: 0,
       doadores: 0,
       podemDoar: 0
+    },
+    camisetas: {
+      preenchido: 0,
+      incompleto: 0
     }
   });
   const [filtros, setFiltros] = useState({
@@ -62,7 +70,8 @@ export default function LiderancaPage() {
     funcao: '',
     status: '',
     apenasDoadores: false,
-    apenasDisponiveis: false
+    apenasDisponiveis: false,
+    apenasPreenchidos: false
   });
 
   const supabase = createBrowserClient<Database>(
@@ -89,6 +98,11 @@ export default function LiderancaPage() {
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       return lastDonation <= threeMonthsAgo;
     }
+  };
+
+  // Função para verificar o status da camiseta
+  const verificarStatusCamiseta = (integrante: IntegranteType) => {
+    return integrante.camisa1_tamanho && integrante.camisa2_tamanho ? 'Preenchido' : 'Incompleto';
   };
 
   // Função para exportar dados em CSV
@@ -163,6 +177,10 @@ export default function LiderancaPage() {
           doadores: 0,
           podemDoar: 0
         };
+        const camisetas = {
+          preenchido: 0,
+          incompleto: 0
+        };
 
         data.forEach((integrante) => {
           // Contagem por função
@@ -184,13 +202,21 @@ export default function LiderancaPage() {
           } else {
             doadores.naoDoadores++;
           }
+          
+          // Contagem de status de camiseta
+          if (integrante.camisa1_tamanho && integrante.camisa2_tamanho) {
+            camisetas.preenchido++;
+          } else {
+            camisetas.incompleto++;
+          }
         });
 
         setEstatisticas({
           total,
           porFuncao,
           porStatus,
-          doadores
+          doadores,
+          camisetas
         });
 
         setIntegrantes(data);
@@ -216,8 +242,10 @@ export default function LiderancaPage() {
     const matchDoador = !filtros.apenasDoadores || integrante.is_blood_donor;
     const matchDisponivel = !filtros.apenasDisponiveis || 
                           (integrante.is_blood_donor && podeDoarSangue(integrante.last_blood_donation, integrante.gender));
+    const matchCamiseta = !filtros.apenasPreenchidos || 
+                          (integrante.camisa1_tamanho && integrante.camisa2_tamanho);
 
-    return matchBusca && matchFuncao && matchStatus && matchDoador && matchDisponivel;
+    return matchBusca && matchFuncao && matchStatus && matchDoador && matchDisponivel && matchCamiseta;
   });
 
   if (loading) {
@@ -254,7 +282,7 @@ export default function LiderancaPage() {
     <AppLayout>
       <div className="px-4 pb-8">
         {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {/* Total de Integrantes (com Status) */}
           <motion.div 
             className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
@@ -344,6 +372,41 @@ export default function LiderancaPage() {
               ))}
             </div>
           </motion.div>
+
+          {/* Status de Camisetas */}
+          <motion.div 
+            className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="flex items-center text-gray-600 mb-5">
+              <svg 
+                className="w-6 h-6 text-blue-600 mr-2" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"
+                />
+              </svg>
+              <span className="text-blue-600 font-medium">Camisetas</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Preenchido</span>
+                <span className="text-green-600 font-semibold">{estatisticas.camisetas.preenchido}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Incompleto</span>
+                <span className="text-orange-600 font-semibold">{estatisticas.camisetas.incompleto}</span>
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Filtros */}
@@ -427,14 +490,25 @@ export default function LiderancaPage() {
                   <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">Disponíveis para Doar</span>
                 </label>
 
-                {(filtros.busca || filtros.funcao || filtros.status || filtros.apenasDoadores || filtros.apenasDisponiveis) && (
+                <label className="inline-flex items-center px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={filtros.apenasPreenchidos}
+                    onChange={(e) => setFiltros({ ...filtros, apenasPreenchidos: e.target.checked })}
+                    className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 focus:ring-offset-0"
+                  />
+                  <span className="ml-2 text-sm font-medium text-gray-700 group-hover:text-gray-900">Camisetas</span>
+                </label>
+
+                {(filtros.busca || filtros.funcao || filtros.status || filtros.apenasDoadores || filtros.apenasDisponiveis || filtros.apenasPreenchidos) && (
                   <button
                     onClick={() => setFiltros({ 
                       busca: '', 
                       funcao: '', 
                       status: '', 
                       apenasDoadores: false, 
-                      apenasDisponiveis: false 
+                      apenasDisponiveis: false,
+                      apenasPreenchidos: false
                     })}
                     className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-all duration-200 hover:text-gray-900"
                   >
@@ -475,6 +549,7 @@ export default function LiderancaPage() {
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Apelido</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Função</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tamanho Camiseta</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-xl">Doador de Sangue</th>
                   </tr>
                 </thead>
@@ -510,6 +585,9 @@ export default function LiderancaPage() {
                             : 'bg-blue-50 text-blue-700'}`}>
                           {integrante.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {verificarStatusCamiseta(integrante)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {integrante.is_blood_donor ? (
