@@ -900,6 +900,8 @@ export default function ProfilePage() {
                               <option value="G">G - Comp 72 Larg 56</option>
                               <option value="GG">GG - Comp 74 Larg 58</option>
                               <option value="XXG">XXG - Comp 76 Larg 60</option>
+                              <option value="2GG">2GG - Comp 81 Larg 64</option>
+                              <option value="4GG">4GG - Comp 87 Larg 71</option>
                             </select>
                           )}
                         />
@@ -941,6 +943,8 @@ export default function ProfilePage() {
                               <option value="G">G - Comp 72 Larg 56</option>
                               <option value="GG">GG - Comp 74 Larg 58</option>
                               <option value="XXG">XXG - Comp 76 Larg 60</option>
+                              <option value="2GG">2GG - Comp 81 Larg 64</option>
+                              <option value="4GG">4GG - Comp 87 Larg 71</option>
                             </select>
                           )}
                         />
