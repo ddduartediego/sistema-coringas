@@ -893,13 +893,13 @@ export default function ProfilePage() {
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                             >
                               <option value="">Selecione...</option>
-                              <option value="PP">PP</option>
-                              <option value="P">P</option>
-                              <option value="M">M</option>
-                              <option value="G">G</option>
-                              <option value="GG">GG</option>
-                              <option value="XG">XG</option>
-                              <option value="XXG">XXG</option>
+                              <option value="XP">XP - Comp 62 Larg 48</option>
+                              <option value="PP">PP - Comp 65 Larg 50</option>
+                              <option value="P">P - Comp 68 Larg 52</option>
+                              <option value="M">M - Comp 70 Larg 54</option>
+                              <option value="G">G - Comp 72 Larg 56</option>
+                              <option value="GG">GG - Comp 74 Larg 58</option>
+                              <option value="XXG">XXG - Comp 76 Larg 60</option>
                             </select>
                           )}
                         />
@@ -934,13 +934,13 @@ export default function ProfilePage() {
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                             >
                               <option value="">Selecione...</option>
-                              <option value="PP">PP</option>
-                              <option value="P">P</option>
-                              <option value="M">M</option>
-                              <option value="G">G</option>
-                              <option value="GG">GG</option>
-                              <option value="XG">XG</option>
-                              <option value="XXG">XXG</option>
+                              <option value="XP">XP - Comp 62 Larg 48</option>
+                              <option value="PP">PP - Comp 65 Larg 50</option>
+                              <option value="P">P - Comp 68 Larg 52</option>
+                              <option value="M">M - Comp 70 Larg 54</option>
+                              <option value="G">G - Comp 72 Larg 56</option>
+                              <option value="GG">GG - Comp 74 Larg 58</option>
+                              <option value="XXG">XXG - Comp 76 Larg 60</option>
                             </select>
                           )}
                         />
