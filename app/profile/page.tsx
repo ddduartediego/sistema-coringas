@@ -974,7 +974,7 @@ export default function ProfilePage() {
                               type="text"
                               value={field.value || ''}
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                              placeholder="Livre"
+                              placeholder="Camiseta Infantil - Informar Idade e Tamanho"
                             />
                           )}
                         />
