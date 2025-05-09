@@ -168,6 +168,7 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [incompleteFields, setIncompleteFields] = useState<string[]>([]);
   const [showAddress, setShowAddress] = useState(false);
+  const [showShirtAlertModal, setShowShirtAlertModal] = useState(false);
   const [userData, setUserData] = useState<{
     id: string;
     name: string;
@@ -185,7 +186,7 @@ export default function ProfilePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const { control, handleSubmit, setValue, reset, watch, formState: { errors } } = useForm<ProfileFormData>({
+  const { control, handleSubmit, setValue, reset, watch, formState: { errors }, setFocus } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       nickname: '',
@@ -244,6 +245,8 @@ export default function ProfilePage() {
       { name: 'nickname', label: 'Apelido' },
       { name: 'status', label: 'Status' },
       { name: 'role', label: 'Função' },
+      { name: 'camisa1_tamanho', label: 'Tamanho da Camiseta 1' },
+      { name: 'camisa2_tamanho', label: 'Tamanho da Camiseta 2' },
       { name: 'birth_date', label: 'Data de Nascimento' },
       { name: 'cpf', label: 'CPF' },
       { name: 'gender', label: 'Gênero' },
@@ -309,6 +312,10 @@ export default function ProfilePage() {
         // Verificar campos incompletos
         if (profile) {
           checkIncompleteFields(profile);
+          // Lógica para exibir o modal de alerta de camiseta
+          if (!profile.camisa1_tamanho || !profile.camisa2_tamanho) {
+            setShowShirtAlertModal(true);
+          }
         }
 
         // Preencher formulário
@@ -362,6 +369,21 @@ export default function ProfilePage() {
 
     fetchData();
   }, [supabase, setValue]);
+
+  const handleShirtAlertOk = () => {
+    setShowShirtAlertModal(false);
+    setIsEditing(true);
+    // Atraso pequeno para garantir que o modo de edição esteja ativo e os campos visíveis
+    setTimeout(() => {
+      if (profileData) { // Adicionada verificação para profileData
+        if (!profileData.camisa1_tamanho) {
+          setFocus('camisa1_tamanho');
+        } else if (!profileData.camisa2_tamanho) {
+          setFocus('camisa2_tamanho');
+        }
+      }
+    }, 100); // Pequeno delay para garantir que os inputs estejam renderizados e focáveis
+  };
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
@@ -515,6 +537,35 @@ export default function ProfilePage() {
   return (
     <AppLayout>
       <div className="pb-8">
+        {/* Modal de Alerta de Camiseta */}
+        {showShirtAlertModal && (
+          <MotionDiv
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+          >
+            <MotionDiv
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -50, opacity: 0 }}
+              className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center"
+            >
+              <Warning className="text-yellow-500 mx-auto mb-4" style={{ fontSize: 40 }} />
+              <h3 className="text-lg font-semibold mb-2">Atenção!</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Por favor, preencha as informações de tamanho para Camiseta 1 e Camiseta 2.
+              </p>
+              <button
+                onClick={handleShirtAlertOk}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              >
+                OK
+              </button>
+            </MotionDiv>
+          </MotionDiv>
+        )}
+
         {/* Header com foto de perfil */}
         <motion.div 
           className="bg-white rounded-lg shadow-md mb-8"
