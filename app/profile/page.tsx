@@ -131,7 +131,9 @@ const profileSchema = z.object({
   nickname: z.string().min(1, 'Apelido é obrigatório'),
   status: z.string().min(1, 'Status é obrigatório'),
   role: z.string().min(1, 'Função é obrigatória'),
-  shirt_size: z.string().min(1, 'Tamanho da camiseta é obrigatório'),
+  camisa1_tamanho: z.string().optional().nullable(),
+  camisa2_tamanho: z.string().optional().nullable(),
+  camisa3_tamanho: z.string().optional().nullable(),
   birth_date: z.string().optional().nullable(),
   cpf: z.string().optional().nullable(),
   gender: z.string().refine((val) => !val || ['Masculino', 'Feminino', 'Prefiro não dizer'].includes(val), {
@@ -189,7 +191,9 @@ export default function ProfilePage() {
       nickname: '',
       status: '',
       role: '',
-      shirt_size: '',
+      camisa1_tamanho: null,
+      camisa2_tamanho: null,
+      camisa3_tamanho: null,
       birth_date: null,
       cpf: null,
       gender: null,
@@ -240,7 +244,6 @@ export default function ProfilePage() {
       { name: 'nickname', label: 'Apelido' },
       { name: 'status', label: 'Status' },
       { name: 'role', label: 'Função' },
-      { name: 'shirt_size', label: 'Tamanho da Camiseta' },
       { name: 'birth_date', label: 'Data de Nascimento' },
       { name: 'cpf', label: 'CPF' },
       { name: 'gender', label: 'Gênero' },
@@ -313,7 +316,9 @@ export default function ProfilePage() {
           setValue('nickname', profile.nickname || '');
           setValue('status', profile.status || '');
           setValue('role', profile.role || '');
-          setValue('shirt_size', profile.shirt_size || '');
+          setValue('camisa1_tamanho', profile.camisa1_tamanho || null);
+          setValue('camisa2_tamanho', profile.camisa2_tamanho || null);
+          setValue('camisa3_tamanho', profile.camisa3_tamanho || null);
           setValue('birth_date', profile.birth_date || null);
           setValue('cpf', profile.cpf || null);
           setValue('gender', profile.gender || null);
@@ -371,7 +376,9 @@ export default function ProfilePage() {
           nickname: data.nickname,
           status: data.status,
           role: data.role,
-          shirt_size: data.shirt_size,
+          camisa1_tamanho: data.camisa1_tamanho,
+          camisa2_tamanho: data.camisa2_tamanho,
+          camisa3_tamanho: data.camisa3_tamanho,
           birth_date: data.birth_date,
           cpf: data.cpf,
           gender: data.gender,
@@ -431,7 +438,9 @@ export default function ProfilePage() {
         nickname: profileData.nickname || '',
         status: profileData.status || '',
         role: profileData.role || '',
-        shirt_size: profileData.shirt_size || '',
+        camisa1_tamanho: profileData.camisa1_tamanho || null,
+        camisa2_tamanho: profileData.camisa2_tamanho || null,
+        camisa3_tamanho: profileData.camisa3_tamanho || null,
         birth_date: profileData.birth_date || null,
         cpf: profileData.cpf || null,
         gender: profileData.gender || null,
@@ -811,7 +820,8 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {/* Tamanho Camiseta */}
+                {/* ==== INÍCIO BLOCO CAMISETAS ==== */}
+                {/* Tamanho Camiseta 1 */}
                 <div className="flex items-start">
                   <div className="text-gray-400 mt-1 mr-3">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -819,15 +829,16 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-500">Tamanho da Camiseta</p>
+                    <p className="text-sm text-gray-500">Tamanho da Camiseta 1</p>
                     {isEditing ? (
                       <div>
                         <Controller
-                          name="shirt_size"
+                          name="camisa1_tamanho"
                           control={control}
                           render={({ field }) => (
                             <select
                               {...field}
+                              value={field.value || ''}
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                             >
                               <option value="">Selecione...</option>
@@ -841,15 +852,91 @@ export default function ProfilePage() {
                             </select>
                           )}
                         />
-                        {errors.shirt_size && (
-                          <p className="mt-1 text-xs text-red-600">{errors.shirt_size.message}</p>
+                        {errors.camisa1_tamanho && (
+                          <p className="mt-1 text-xs text-red-600">{errors.camisa1_tamanho.message}</p>
                         )}
                       </div>
                     ) : (
-                      <p className="font-medium">{profileData?.shirt_size || '-'}</p>
+                      <p className="font-medium">{profileData?.camisa1_tamanho || '-'}</p>
                     )}
                   </div>
                 </div>
+
+                {/* Tamanho Camiseta 2 */}
+                <div className="flex items-start mt-4">
+                  <div className="text-gray-400 mt-1 mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Tamanho da Camiseta 2</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="camisa2_tamanho"
+                          control={control}
+                          render={({ field }) => (
+                            <select
+                              {...field}
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                            >
+                              <option value="">Selecione...</option>
+                              <option value="PP">PP</option>
+                              <option value="P">P</option>
+                              <option value="M">M</option>
+                              <option value="G">G</option>
+                              <option value="GG">GG</option>
+                              <option value="XG">XG</option>
+                              <option value="XXG">XXG</option>
+                            </select>
+                          )}
+                        />
+                        {errors.camisa2_tamanho && (
+                          <p className="mt-1 text-xs text-red-600">{errors.camisa2_tamanho.message}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.camisa2_tamanho || '-'}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tamanho Camiseta Extra */}
+                <div className="flex items-start mt-4">
+                  <div className="text-gray-400 mt-1 mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500">Tamanho da Camiseta Extra</p>
+                    {isEditing ? (
+                      <div>
+                        <Controller
+                          name="camisa3_tamanho"
+                          control={control}
+                          render={({ field }) => (
+                            <input
+                              {...field}
+                              type="text"
+                              value={field.value || ''}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                              placeholder="Livre"
+                            />
+                          )}
+                        />
+                        {errors.camisa3_tamanho && (
+                          <p className="mt-1 text-xs text-red-600">{errors.camisa3_tamanho.message}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="font-medium">{profileData?.camisa3_tamanho || '-'}</p>
+                    )}
+                  </div>
+                </div>
+                {/* ==== FIM BLOCO CAMISETAS ==== */}
 
                 {/* CPF e RG em duas colunas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

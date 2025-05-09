@@ -18,7 +18,9 @@ export interface Database {
           nickname: string
           status: string
           role: string
-          shirt_size: string
+          camisa1_tamanho: string | null
+          camisa2_tamanho: string | null
+          camisa3_tamanho: string | null
           birth_date: string | null
           cpf: string | null
           gender: string | null
@@ -41,7 +43,9 @@ export interface Database {
           nickname?: string
           status?: string
           role?: string
-          shirt_size?: string
+          camisa1_tamanho?: string | null
+          camisa2_tamanho?: string | null
+          camisa3_tamanho?: string | null
           birth_date?: string | null
           cpf?: string | null
           gender?: string | null
@@ -64,7 +68,9 @@ export interface Database {
           nickname?: string
           status?: string
           role?: string
-          shirt_size?: string
+          camisa1_tamanho?: string | null
+          camisa2_tamanho?: string | null
+          camisa3_tamanho?: string | null
           birth_date?: string | null
           cpf?: string | null
           gender?: string | null

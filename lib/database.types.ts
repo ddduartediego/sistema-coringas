@@ -577,7 +577,9 @@ export type Database = {
           profession: string | null
           rg: string | null
           role: string | null
-          shirt_size: string | null
+          camisa1_tamanho: string | null
+          camisa2_tamanho: string | null
+          camisa3_tamanho: string | null
           status: string | null
           updated_at: string
           user_id: string
@@ -612,7 +614,9 @@ export type Database = {
           profession?: string | null
           rg?: string | null
           role?: string | null
-          shirt_size?: string | null
+          camisa1_tamanho?: string | null
+          camisa2_tamanho?: string | null
+          camisa3_tamanho?: string | null
           status?: string | null
           updated_at?: string
           user_id: string
@@ -647,7 +651,9 @@ export type Database = {
           profession?: string | null
           rg?: string | null
           role?: string | null
-          shirt_size?: string | null
+          camisa1_tamanho?: string | null
+          camisa2_tamanho?: string | null
+          camisa3_tamanho?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string

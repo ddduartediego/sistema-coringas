@@ -26,7 +26,9 @@ create table if not exists public.profiles (
   nickname text,
   status text, -- Referência para config_status
   role text, -- Referência para config_roles
-  shirt_size text,
+  camisa1_tamanho text,
+  camisa2_tamanho text,
+  camisa3_tamanho text,
   birth_date date,
   cpf text,
   gender text,
