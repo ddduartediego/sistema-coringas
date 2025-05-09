@@ -10,12 +10,16 @@ import {
   Person,
   Search,
   FilterList,
-  Clear
+  Clear,
+  Visibility,
+  GetApp
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface IntegranteType {
   id: string;
+  user_id: string;
   name: string;
   email: string;
   status: string;
@@ -24,6 +28,9 @@ interface IntegranteType {
   is_blood_donor: boolean;
   last_blood_donation: string | null;
   gender: string | null;
+  camisa1_tamanho: string | null;
+  camisa2_tamanho: string | null;
+  camisa3_tamanho: string | null;
 }
 
 interface EstatisticasType {
@@ -82,6 +89,58 @@ export default function LiderancaPage() {
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       return lastDonation <= threeMonthsAgo;
     }
+  };
+
+  // Função para exportar dados em CSV
+  const exportarCSV = () => {
+    // Criar o cabeçalho do CSV
+    const headers = ['Nome', 'Apelido', 'Email', 'Tamanho Camisa 1', 'Tamanho Camisa 2', 'Tamanho Camisa Extra'];
+    
+    // Formatar os dados dos integrantes
+    const csvData = integrantes.map(integrante => [
+      integrante.name || 'Não preenchido',
+      integrante.nickname || 'Não preenchido',
+      integrante.email || 'Não preenchido',
+      integrante.camisa1_tamanho || 'Não preenchido',
+      integrante.camisa2_tamanho || 'Não preenchido',
+      integrante.camisa3_tamanho || 'Não preenchido'
+    ]);
+    
+    // Adicionar os cabeçalhos aos dados
+    csvData.unshift(headers);
+    
+    // Converter os dados para o formato CSV
+    const csvString = csvData.map(row => row.join(',')).join('\n');
+    
+    // Criar um objeto blob contendo o CSV
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    
+    // Criar um link para download
+    const link = document.createElement('a');
+    
+    // Converter o blob para URL
+    const url = URL.createObjectURL(blob);
+    
+    // Configurar o link
+    link.setAttribute('href', url);
+    
+    // Formatar a data para o nome do arquivo
+    const hoje = new Date();
+    const dia = hoje.getDate().toString().padStart(2, '0');
+    const mes = (hoje.getMonth() + 1).toString().padStart(2, '0');
+    const ano = hoje.getFullYear();
+    
+    // Definir o nome do arquivo
+    link.setAttribute('download', `Lista_de_Integrantes_${dia}-${mes}-${ano}.csv`);
+    
+    // Anexar o link ao documento
+    document.body.appendChild(link);
+    
+    // Clicar no link para iniciar o download
+    link.click();
+    
+    // Remover o link do documento
+    document.body.removeChild(link);
   };
 
   // Buscar dados dos integrantes
@@ -383,6 +442,16 @@ export default function LiderancaPage() {
                     Limpar Filtros
                   </button>
                 )}
+                
+                {/* Botão de exportação CSV */}
+                <button
+                  onClick={exportarCSV}
+                  className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg border border-blue-600 transition-all duration-200"
+                  title="Exportar lista para CSV"
+                >
+                  <GetApp className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </button>
               </div>
             </div>
           </div>
@@ -401,7 +470,8 @@ export default function LiderancaPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-xl">Nome</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-xl">Ações</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Apelido</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Função</th>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -411,6 +481,16 @@ export default function LiderancaPage() {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {integrantesFiltrados.map((integrante) => (
                     <tr key={integrante.id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Link href={`/profile/${integrante.user_id}`} title="Acessar perfil do Integrante">
+                          <button 
+                            className="flex items-center text-sm text-blue-600 hover:text-blue-800 transition-colors py-1 px-2 rounded-md hover:bg-blue-50"
+                          >
+                            <Visibility fontSize="small" className="mr-1" />
+                            Ver Perfil
+                          </button>
+                        </Link>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{integrante.name}</div>
                         <div className="text-sm text-gray-500">{integrante.email}</div>
